@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ladda upp dokument — VSI</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 16px; color: #222; }
+  .kort { max-width: 560px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.12); overflow: hidden; }
+  .logo-rad { background: white; padding: 16px 24px 0; text-align: center; }
+  .logo-rad img { height: 52px; }
+  .header { background: #003f7f; padding: 18px 24px; }
+  .header h1 { color: white; font-size: 17px; margin: 0; }
+  .header p { color: #b3cde8; font-size: 13px; margin: 4px 0 0; }
+  .body { padding: 24px; }
+  .dok-info { background: #e8f4fd; border: 1px solid #b3d8f0; border-radius: 6px; padding: 14px 16px; margin-bottom: 20px; }
+  .dok-info .typ { font-size: 18px; font-weight: 700; color: #003f7f; }
+  .dok-info .forening { font-size: 13px; color: #555; margin-top: 3px; }
+  .dok-info .ar { font-size: 12px; color: #888; margin-top: 2px; }
+  .steg { display: flex; flex-direction: column; gap: 16px; }
+  .steg-rad { display: flex; align-items: flex-start; gap: 14px; }
+  .steg-nr { background: #003f7f; color: white; border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; margin-top: 2px; }
+  .steg-nr.klar { background: #1a6b2a; }
+  .steg-innehall { flex: 1; }
+  .steg-innehall p { font-size: 14px; color: #333; margin-bottom: 8px; }
+  .fil-label { display: inline-flex; align-items: center; gap: 8px; background: #e8f0f8; border: 2px dashed #b3c8e0; padding: 12px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; color: #003f7f; transition: background .15s; }
+  .fil-label:hover { background: #d4e6f5; }
+  .fil-vald { display: none; margin-top: 8px; background: #e8f8ee; border: 1px solid #a8e6b8; padding: 8px 12px; border-radius: 4px; font-size: 13px; color: #1a6b2a; }
+  .upload-knapp { display: block; width: 100%; background: #003f7f; color: white; border: none; border-radius: 6px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 4px; }
+  .upload-knapp:hover:not(:disabled) { background: #00529e; }
+  .upload-knapp:disabled { opacity: 0.45; cursor: not-allowed; }
+  .progress-wrap { display: none; margin-top: 10px; }
+  .progress-bar { height: 6px; background: #e8f0f8; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #003f7f; width: 0%; transition: width .3s; border-radius: 3px; }
+  .progress-txt { font-size: 12px; color: #555; margin-top: 5px; }
+  .fel-box { background: #fff0f0; border: 1px solid #ffb3b3; border-radius: 4px; padding: 10px 14px; font-size: 13px; color: #c00; margin-top: 12px; display: none; }
+  .bekraftelse { display: none; text-align: center; padding: 40px 24px; }
+  .bekraftelse .ikon { font-size: 52px; margin-bottom: 14px; }
+  .bekraftelse h2 { color: #003f7f; margin-bottom: 8px; }
+  .bekraftelse p { color: #555; font-size: 14px; }
+  .footer { background: #f0f4f8; padding: 10px 24px; border-top: 1px solid #dde4ec; font-size: 11px; color: #888; }
+  .footer a { color: #888; }
+</style>
+</head>
+<body>
+<div class="kort">
+  <div class="logo-rad">
+    <img src="../assets/vsi-logo.png" alt="VSI" onerror="this.style.display='none'">
+  </div>
+  <div class="header">
+    <h1>&#128196; Ladda upp f&#246;reningsdokument</h1>
+    <p>V&#228;nskapsf&#246;rbundet Sverige-Israel</p>
+  </div>
+
+  <div class="body" id="formular-body">
+    <!-- Dokumentinfo -->
+    <div class="dok-info">
+      <div class="typ" id="dok-typ">Dokument</div>
+      <div class="forening" id="dok-forening"></div>
+      <div class="ar" id="dok-ar"></div>
+    </div>
+
+    <form id="upload-form">
+      <!-- Dolda fält för EmailJS-mall -->
+      <input type="hidden" name="subject"   id="h-subject">
+      <input type="hidden" name="body"      id="h-body">
+      <input type="hidden" name="from_name" id="h-forening">
+
+      <div class="steg">
+        <!-- Steg 1: välj fil -->
+        <div class="steg-rad">
+          <div class="steg-nr" id="steg1-nr">1</div>
+          <div class="steg-innehall">
+            <p>V&#228;lj PDF-filen fr&#229;n din enhet</p>
+            <label class="fil-label">
+              &#128206; V&#228;lj PDF-fil(er)
+              <input type="file" id="fil-input" name="fil" accept=".pdf,.PDF" multiple>
+            </label>
+            <div class="fil-vald" id="fil-vald">&#10003; <span id="fil-namn"></span></div>
+          </div>
+        </div>
+
+        <!-- Steg 2: skicka -->
+        <div class="steg-rad">
+          <div class="steg-nr" id="steg2-nr">2</div>
+          <div class="steg-innehall">
+            <p>Klicka <strong>Skicka in</strong> f&#246;r att skicka dokumentet</p>
+            <button type="button" class="upload-knapp" id="upload-knapp" disabled>
+              &#128228; Skicka in
+            </button>
+            <div class="progress-wrap" id="progress-wrap">
+              <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+              <div class="progress-txt" id="progress-txt">Skickar...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+
+    <div class="fel-box" id="fel-box"></div>
+  </div>
+
+  <!-- Bekräftelse -->
+  <div class="bekraftelse" id="bekraftelse-vy">
+    <div class="ikon">&#9989;</div>
+    <h2>Dokumentet &#228;r inskickat!</h2>
+    <p id="bekr-text">Tack — dokumentet har skickats in och väntar på godkännande.</p>
+    <p style="margin-top:8px;color:#888;font-size:12px;">Du kan st&#228;nga det h&#228;r f&#246;nstret.</p>
+  </div>
+
+  <div class="footer">
+    V&#228;nskapsf&#246;rbundet Sverige-Israel &nbsp;&#183;&nbsp;
+    <a href="mailto:administration@sverigeisrael.se">administration@sverigeisrael.se</a>
+  </div>
+</div>
+
+<script src="../config.js"></script>
+<script>
+// Läs URL-params: ?f=FORENING&d=DOKTYP_ID&a=AR&n=DOKTYP_NAMN
+const p          = new URLSearchParams(window.location.search);
+const forening   = decodeURIComponent(p.get('f') || '');
+const doktypId   = p.get('d') || '';
+const ar         = p.get('a') || new Date().getFullYear().toString();
+const doktypNamn = decodeURIComponent(p.get('n') || 'Dokument');
+
+document.getElementById('dok-typ').textContent      = doktypNamn + (ar !== 'engång' ? ' ' + ar : '');
+document.getElementById('dok-forening').textContent = forening;
+document.getElementById('dok-ar').textContent       = ar !== 'engång' ? 'Verksamhetsår ' + ar : 'Engångsdokument';
+
+// Fyll dolda fält
+document.getElementById('h-forening').value = forening;
+document.getElementById('h-subject').value  = `[VSI:${forening}|${doktypId}|${ar}]`;
+document.getElementById('h-body').value = [
+  'DOKUMENTUPPLADDNING - VSI',
+  '========================',
+  'Dokument: ' + doktypNamn,
+  'Förening: ' + forening,
+  'År: ' + ar,
+  'Datum: ' + new Date().toLocaleDateString('sv-SE'),
+].join('\n');
+
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+const filInput    = document.getElementById('fil-input');
+const uploadKnapp = document.getElementById('upload-knapp');
+const filVald     = document.getElementById('fil-vald');
+const filNamn     = document.getElementById('fil-namn');
+
+// Filval
+filInput.addEventListener('change', () => {
+  if (filInput.files.length > 0) {
+    const namn = Array.from(filInput.files).map(f => f.name).join(', ');
+    filNamn.textContent = filInput.files.length === 1 ? namn : `${filInput.files.length} filer: ${namn}`;
+    filVald.style.display = 'block';
+    document.getElementById('steg1-nr').classList.add('klar');
+    uploadKnapp.disabled = false;
+  }
+});
+
+// Skicka
+uploadKnapp.addEventListener('click', async () => {
+  if (!filInput.files.length) return;
+
+  uploadKnapp.disabled = true;
+  uploadKnapp.textContent = 'Skickar...';
+  const felBox       = document.getElementById('fel-box');
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressFill = document.getElementById('progress-fill');
+  const progressTxt  = document.getElementById('progress-txt');
+  felBox.style.display    = 'none';
+  progressWrap.style.display = 'block';
+  progressFill.style.width   = '40%';
+  progressTxt.textContent    = 'Skickar mejl...';
+
+  try {
+    await emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, '#upload-form');
+
+    progressFill.style.width = '100%';
+    document.getElementById('formular-body').style.display  = 'none';
+    document.getElementById('bekraftelse-vy').style.display = 'block';
+    document.getElementById('bekr-text').textContent =
+      `"${doktypNamn}" för ${forening} har skickats in och väntar på godkännande.`;
+
+  } catch(err) {
+    felBox.textContent      = 'Fel: ' + (err?.text || err?.message || JSON.stringify(err));
+    felBox.style.display    = 'block';
+    uploadKnapp.disabled    = false;
+    uploadKnapp.textContent = '📨 Skicka in';
+    progressWrap.style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>
