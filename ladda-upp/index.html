@@ -106,7 +106,7 @@
   <div class="bekraftelse" id="bekraftelse-vy">
     <div class="ikon">&#9989;</div>
     <h2>Dokumentet &#228;r inskickat!</h2>
-    <p id="bekr-text">Tack — dokumentet har skickats in och väntar på godkännande.</p>
+    <p id="bekr-text">Tack — dokumentet har skickats in och väntar på bekräftelse på mottagandet.</p>
     <p style="margin-top:8px;color:#888;font-size:12px;">Du kan st&#228;nga det h&#228;r f&#246;nstret.</p>
   </div>
 
@@ -181,7 +181,7 @@ uploadKnapp.addEventListener('click', async () => {
     document.getElementById('formular-body').style.display  = 'none';
     document.getElementById('bekraftelse-vy').style.display = 'block';
     document.getElementById('bekr-text').textContent =
-      `"${doktypNamn}" för ${forening} har skickats in och väntar på godkännande.`;
+      `"${doktypNamn}" för ${forening} har skickats in och väntar på bekräftelse på mottagandet.`;
 
   } catch(err) {
     felBox.textContent      = 'Fel: ' + (err?.text || err?.message || JSON.stringify(err));
