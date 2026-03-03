@@ -28,6 +28,7 @@
   .fil-label { display: inline-flex; align-items: center; gap: 8px; background: #e8f0f8; border: 2px dashed #b3c8e0; padding: 12px 18px; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; color: #003f7f; transition: background .15s; }
   .fil-label:hover { background: #d4e6f5; }
   .fil-vald { display: none; margin-top: 8px; background: #e8f8ee; border: 1px solid #a8e6b8; padding: 8px 12px; border-radius: 4px; font-size: 13px; color: #1a6b2a; }
+  .fil-varning { display: none; margin-top: 6px; background: #fff8e1; border: 1px solid #ffe082; padding: 6px 10px; border-radius: 4px; font-size: 12px; color: #7a5c00; }
   .upload-knapp { display: block; width: 100%; background: #003f7f; color: white; border: none; border-radius: 6px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 4px; }
   .upload-knapp:hover:not(:disabled) { background: #00529e; }
   .upload-knapp:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -55,7 +56,6 @@
   </div>
 
   <div class="body" id="formular-body">
-    <!-- Dokumentinfo -->
     <div class="dok-info">
       <div class="typ" id="dok-typ">Dokument</div>
       <div class="forening" id="dok-forening"></div>
@@ -63,26 +63,24 @@
     </div>
 
     <form id="upload-form">
-      <!-- Dolda fält för EmailJS-mall -->
       <input type="hidden" name="subject"   id="h-subject">
       <input type="hidden" name="body"      id="h-body">
       <input type="hidden" name="from_name" id="h-forening">
 
       <div class="steg">
-        <!-- Steg 1: välj fil -->
         <div class="steg-rad">
           <div class="steg-nr" id="steg1-nr">1</div>
           <div class="steg-innehall">
-            <p>V&#228;lj PDF-filen fr&#229;n din enhet</p>
+            <p>V&#228;lj PDF-filen fr&#229;n din enhet (max 10 MB)</p>
             <label class="fil-label">
               &#128206; V&#228;lj PDF-fil(er)
-              <input type="file" id="fil-input" name="fil" accept=".pdf,.PDF" multiple>
+              <input type="file" id="fil-input" accept=".pdf,.PDF" multiple>
             </label>
             <div class="fil-vald" id="fil-vald">&#10003; <span id="fil-namn"></span></div>
+            <div class="fil-varning" id="fil-varning"></div>
           </div>
         </div>
 
-        <!-- Steg 2: skicka -->
         <div class="steg-rad">
           <div class="steg-nr" id="steg2-nr">2</div>
           <div class="steg-innehall">
@@ -92,7 +90,7 @@
             </button>
             <div class="progress-wrap" id="progress-wrap">
               <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-              <div class="progress-txt" id="progress-txt">Skickar...</div>
+              <div class="progress-txt" id="progress-txt">Laddar upp...</div>
             </div>
           </div>
         </div>
@@ -102,7 +100,6 @@
     <div class="fel-box" id="fel-box"></div>
   </div>
 
-  <!-- Bekräftelse -->
   <div class="bekraftelse" id="bekraftelse-vy">
     <div class="ikon">&#9989;</div>
     <h2>Dokumentet &#228;r inskickat!</h2>
@@ -118,7 +115,7 @@
 
 <script src="../config.js"></script>
 <script>
-// Läs URL-params: ?f=FORENING&d=DOKTYP_ID&a=AR&n=DOKTYP_NAMN
+const MAX_MB = 10;
 const p          = new URLSearchParams(window.location.search);
 const forening   = decodeURIComponent(p.get('f') || '');
 const doktypId   = p.get('d') || '';
@@ -128,53 +125,99 @@ const doktypNamn = decodeURIComponent(p.get('n') || 'Dokument');
 document.getElementById('dok-typ').textContent      = doktypNamn + (ar !== 'engång' ? ' ' + ar : '');
 document.getElementById('dok-forening').textContent = forening;
 document.getElementById('dok-ar').textContent       = ar !== 'engång' ? 'Verksamhetsår ' + ar : 'Engångsdokument';
-
-// Fyll dolda fält
-document.getElementById('h-forening').value = forening;
-document.getElementById('h-subject').value  = `[VSI:${forening}|${doktypId}|${ar}]`;
-document.getElementById('h-body').value = [
-  'DOKUMENTUPPLADDNING - VSI',
-  '========================',
-  'Dokument: ' + doktypNamn,
-  'Förening: ' + forening,
-  'År: ' + ar,
-  'Datum: ' + new Date().toLocaleDateString('sv-SE'),
-].join('\n');
+document.getElementById('h-forening').value         = forening;
+document.getElementById('h-subject').value          = `[VSI:${forening}|${doktypId}|${ar}]`;
 
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
 const filInput    = document.getElementById('fil-input');
 const uploadKnapp = document.getElementById('upload-knapp');
-const filVald     = document.getElementById('fil-vald');
-const filNamn     = document.getElementById('fil-namn');
 
-// Filval
 filInput.addEventListener('change', () => {
-  if (filInput.files.length > 0) {
-    const namn = Array.from(filInput.files).map(f => f.name).join(', ');
-    filNamn.textContent = filInput.files.length === 1 ? namn : `${filInput.files.length} filer: ${namn}`;
-    filVald.style.display = 'block';
-    document.getElementById('steg1-nr').classList.add('klar');
-    uploadKnapp.disabled = false;
-  }
-});
-
-// Skicka
-uploadKnapp.addEventListener('click', async () => {
+  const varning = document.getElementById('fil-varning');
+  varning.style.display = 'none';
+  uploadKnapp.disabled  = true;
   if (!filInput.files.length) return;
 
-  uploadKnapp.disabled = true;
-  uploadKnapp.textContent = 'Skickar...';
-  const felBox       = document.getElementById('fel-box');
-  const progressWrap = document.getElementById('progress-wrap');
+  const totalMB = Array.from(filInput.files).reduce((s, f) => s + f.size, 0) / 1024 / 1024;
+  if (totalMB > MAX_MB) {
+    varning.textContent   = `Filen är ${totalMB.toFixed(1)} MB — max ${MAX_MB} MB. Komprimera PDF:en och försök igen.`;
+    varning.style.display = 'block';
+    return;
+  }
+  const namn = Array.from(filInput.files).map(f => f.name).join(', ');
+  document.getElementById('fil-namn').textContent  = `${namn} (${totalMB.toFixed(1)} MB)`;
+  document.getElementById('fil-vald').style.display = 'block';
+  document.getElementById('steg1-nr').classList.add('klar');
+  uploadKnapp.disabled = false;
+});
+
+async function laddaUppTillCloudinary(fil, index, totalt) {
   const progressFill = document.getElementById('progress-fill');
   const progressTxt  = document.getElementById('progress-txt');
-  felBox.style.display    = 'none';
+
+  const fd = new FormData();
+  fd.append('file',           fil);
+  fd.append('upload_preset',  CLOUDINARY_UPLOAD_PRESET);
+  fd.append('folder',         `vsi-dokument/${forening}/${doktypId}`);
+  fd.append('public_id',      `${ar}_${Date.now()}_${fil.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`);
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) {
+        const pct = Math.round((e.loaded / e.total) * 80);
+        progressFill.style.width = pct + '%';
+        progressTxt.textContent  = `Laddar upp fil ${index + 1}/${totalt}… ${pct}%`;
+      }
+    };
+    xhr.onload = () => {
+      if (xhr.status === 200) {
+        const res = JSON.parse(xhr.responseText);
+        resolve(res.secure_url);
+      } else {
+        reject(new Error(`Cloudinary fel ${xhr.status}: ${xhr.responseText}`));
+      }
+    };
+    xhr.onerror = () => reject(new Error('Nätverksfel vid uppladdning'));
+    xhr.send(fd);
+  });
+}
+
+uploadKnapp.addEventListener('click', async () => {
+  if (!filInput.files.length) return;
+  uploadKnapp.disabled       = true;
+  uploadKnapp.textContent    = 'Laddar upp...';
+  const felBox               = document.getElementById('fel-box');
+  const progressWrap         = document.getElementById('progress-wrap');
+  const progressFill         = document.getElementById('progress-fill');
+  const progressTxt          = document.getElementById('progress-txt');
+  felBox.style.display       = 'none';
   progressWrap.style.display = 'block';
-  progressFill.style.width   = '40%';
-  progressTxt.textContent    = 'Skickar mejl...';
+  progressFill.style.width   = '0%';
 
   try {
+    const urls = [];
+    for (let i = 0; i < filInput.files.length; i++) {
+      const url = await laddaUppTillCloudinary(filInput.files[i], i, filInput.files.length);
+      urls.push(url);
+    }
+
+    progressFill.style.width = '90%';
+    progressTxt.textContent  = 'Skickar avisering...';
+
+    document.getElementById('h-body').value = [
+      'DOKUMENTUPPLADDNING - VSI',
+      '========================',
+      'Dokument: ' + doktypNamn,
+      'Förening: ' + forening,
+      'År: '      + ar,
+      'Datum: '   + new Date().toLocaleDateString('sv-SE'),
+      '',
+      ...urls.map(u => `[VSI-DOK-URL:${u}]`),
+    ].join('\n');
+
     await emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, '#upload-form');
 
     progressFill.style.width = '100%';
@@ -183,11 +226,11 @@ uploadKnapp.addEventListener('click', async () => {
     document.getElementById('bekr-text').textContent =
       `"${doktypNamn}" för ${forening} har skickats in och väntar på bekräftelse på mottagandet.`;
 
-  } catch(err) {
-    felBox.textContent      = 'Fel: ' + (err?.text || err?.message || JSON.stringify(err));
-    felBox.style.display    = 'block';
-    uploadKnapp.disabled    = false;
-    uploadKnapp.textContent = '📨 Skicka in';
+  } catch (err) {
+    felBox.textContent         = 'Fel: ' + (err?.message || err?.text || JSON.stringify(err));
+    felBox.style.display       = 'block';
+    uploadKnapp.disabled       = false;
+    uploadKnapp.textContent    = '📨 Skicka in';
     progressWrap.style.display = 'none';
   }
 });
