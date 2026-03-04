@@ -274,28 +274,43 @@ function stängModalBakgrund(e) {
 
 function renderModalLista() {
   const sök  = document.getElementById('modal-sok').value.toLowerCase().trim();
-  // Sök bland ALLA föreningsmedlemmar (alla_m), exkl. redan tillagda i DENNA sektion + roll
+  const lista = document.getElementById('modal-lista');
+
+  if (!sök) {
+    lista.innerHTML = '<div class="modal-tom" style="color:#888;">Skriv ett namn för att söka bland föreningsmedlemmarna</div>';
+    document.getElementById('modal-lagg-till-btn').disabled = true;
+    return;
+  }
+
+  // Befintliga roller för personen i hela styrelseState (alla sektioner)
   const befintligaISektion = new Set(
     styrelseState.filter(p => p.sektion === aktivSektion).map(p => p.id)
   );
-  const pool = (urlData.alla_m || []).filter(m => !befintligaISektion.has(String(m.id || '')));
-  const filtr = sök
-    ? pool.filter(m => (m.fn + ' ' + m.en).toLowerCase().includes(sök))
-    : pool;
+  const rollerPerPerson = {};
+  styrelseState.forEach(p => {
+    if (!rollerPerPerson[p.id]) rollerPerPerson[p.id] = [];
+    rollerPerPerson[p.id].push(p.roll);
+  });
 
-  const lista = document.getElementById('modal-lista');
+  const pool = (urlData.alla_m || []).filter(m => !befintligaISektion.has(String(m.id || '')));
+  const filtr = pool.filter(m => (m.fn + ' ' + m.en).toLowerCase().includes(sök));
+
   if (filtr.length === 0) {
     lista.innerHTML = '<div class="modal-tom">Ingen match</div>';
     return;
   }
-  lista.innerHTML = filtr.slice(0, 60).map(m => `
-    <div class="modal-person" id="mp-${esc(String(m.id||''))}"
+  lista.innerHTML = filtr.slice(0, 60).map(m => {
+    const roller = rollerPerPerson[String(m.id||'')] || [];
+    const rollInfo = roller.length ? `<div class="p-info">Nuv. roll: ${esc(roller.join(', '))}</div>` : '';
+    return `<div class="modal-person" id="mp-${esc(String(m.id||''))}"
          onclick="välj('${esc(String(m.id||''))}','${esc(m.fn||'')}','${esc(m.en||'')}')">
       <div class="person-avatar" style="width:30px;height:30px;font-size:11px;">${esc(initialer(m.fn,m.en))}</div>
       <div>
         <div class="p-namn">${esc(m.fn)} ${esc(m.en)}</div>
+        ${rollInfo}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function välj(id, fn, en) {
