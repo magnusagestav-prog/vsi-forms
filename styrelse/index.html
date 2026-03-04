@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Styrelseuppdatering — VSI</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 16px; color: #222; }
+  .kort { max-width: 680px; margin: 0 auto; background: white; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.12); overflow: hidden; }
+  .logo-rad { background: white; padding: 14px 24px 0; text-align: center; }
+  .logo-rad img { height: 48px; }
+  .header { background: #003f7f; padding: 16px 24px; }
+  .header h1 { color: white; font-size: 17px; margin: 0; }
+  .header p { color: #b3cde8; font-size: 13px; margin: 4px 0 0; }
+  .body { padding: 20px 24px; }
+  .info-box { background: #e8f4fd; border: 1px solid #b3d8f0; border-radius: 4px; padding: 10px 14px; font-size: 13px; color: #003f7f; margin-bottom: 18px; line-height: 1.5; }
+  .sektion-rubrik { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #003f7f; border-bottom: 2px solid #e8f0f8; padding-bottom: 5px; margin-bottom: 10px; margin-top: 20px; display: flex; align-items: center; justify-content: space-between; }
+  .sektion-rubrik:first-of-type { margin-top: 4px; }
+  .person-lista { display: flex; flex-direction: column; gap: 7px; margin-bottom: 8px; }
+  .person-rad { display: flex; align-items: center; gap: 10px; background: #f9fbfd; border: 1px solid #dde4ed; border-radius: 6px; padding: 9px 12px; }
+  .person-avatar { width: 34px; height: 34px; border-radius: 50%; background: #003f7f; color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+  .person-avatar.nf { background: #7a3000; }
+  .person-info { flex: 1; min-width: 0; }
+  .person-namn { font-size: 13px; font-weight: 700; color: #222; }
+  .person-roll { font-size: 11px; color: #003f7f; font-weight: 600; margin-top: 2px; }
+  .ta-bort-knapp { background: none; border: none; cursor: pointer; color: #aaa; font-size: 18px; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; line-height: 1; }
+  .ta-bort-knapp:hover { color: #c00; background: #fff0f0; }
+  .lagg-till-knapp { display: flex; align-items: center; gap: 6px; background: none; border: 1px dashed #b3cde8; border-radius: 6px; padding: 8px 14px; font-size: 12px; color: #003f7f; cursor: pointer; width: 100%; margin-top: 4px; }
+  .lagg-till-knapp:hover { background: #e8f4fd; border-color: #003f7f; }
+  .tom-sektion { font-size: 12px; color: #aaa; font-style: italic; padding: 4px 0 6px; }
+  /* Modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 100; align-items: center; justify-content: center; }
+  .modal-overlay.aktiv { display: flex; }
+  .modal { background: white; border-radius: 8px; padding: 20px; width: 90%; max-width: 460px; max-height: 80vh; display: flex; flex-direction: column; box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+  .modal-header { font-size: 14px; font-weight: 700; color: #003f7f; margin-bottom: 12px; }
+  .modal-sok { width: 100%; border: 1px solid #ccd8e8; border-radius: 4px; padding: 8px 10px; font-size: 14px; margin-bottom: 10px; }
+  .modal-sok:focus { outline: none; border-color: #003f7f; }
+  .modal-lista { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 80px; }
+  .modal-person { display: flex; align-items: center; gap: 10px; border: 1px solid #dde4ed; border-radius: 6px; padding: 9px 12px; cursor: pointer; }
+  .modal-person:hover { background: #e8f4fd; border-color: #003f7f; }
+  .modal-person .p-namn { font-size: 13px; font-weight: 700; }
+  .modal-person .p-info { font-size: 11px; color: #888; }
+  .modal-tom { font-size: 12px; color: #aaa; text-align: center; padding: 20px; }
+  .modal-roll { margin-top: 12px; }
+  .modal-roll label { font-size: 12px; font-weight: 600; color: #555; display: block; margin-bottom: 4px; }
+  .modal-roll select { width: 100%; border: 1px solid #ccd8e8; border-radius: 4px; padding: 8px 10px; font-size: 14px; }
+  .modal-knappar { display: flex; gap: 8px; margin-top: 14px; }
+  .modal-lagg-till { flex: 1; background: #003f7f; color: white; border: none; border-radius: 4px; padding: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .modal-lagg-till:hover { background: #00529e; }
+  .modal-lagg-till:disabled { opacity: .4; cursor: not-allowed; }
+  .modal-avbryt { background: #f0f4f8; color: #555; border: 1px solid #ccd8e8; border-radius: 4px; padding: 10px 16px; font-size: 13px; cursor: pointer; }
+  /* Bekräftelsekryssruta */
+  .bekr-rad { display: flex; align-items: flex-start; gap: 10px; background: #fffbe6; border: 1px solid #ffe58f; border-radius: 6px; padding: 12px 14px; margin-top: 22px; cursor: pointer; }
+  .bekr-rad input[type=checkbox] { width: 18px; height: 18px; accent-color: #003f7f; cursor: pointer; flex-shrink: 0; margin-top: 1px; }
+  .bekr-rad span { font-size: 13px; color: #333; line-height: 1.5; }
+  /* Skicka */
+  .skicka-knapp { display: block; width: 100%; background: #003f7f; color: white; border: none; border-radius: 4px; padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 14px; }
+  .skicka-knapp:hover:not(:disabled) { background: #00529e; }
+  .skicka-knapp:disabled { opacity: .4; cursor: not-allowed; }
+  .fel-box { background: #fff0f0; border: 1px solid #ffb3b3; border-radius: 4px; padding: 10px 14px; font-size: 13px; color: #c00; margin-top: 12px; display: none; }
+  /* Bekräftelsevy */
+  .bekraftelse { display: none; text-align: center; padding: 40px 24px; }
+  .bekraftelse .ikon { font-size: 52px; margin-bottom: 14px; }
+  .bekraftelse h2 { color: #003f7f; margin-bottom: 8px; }
+  .bekraftelse p { color: #555; font-size: 14px; line-height: 1.6; }
+  .footer { background: #f0f4f8; padding: 10px 24px; border-top: 1px solid #dde4ec; font-size: 11px; color: #888; text-align: center; }
+  .footer a { color: #888; }
+</style>
+</head>
+<body>
+<div class="kort">
+  <div class="logo-rad">
+    <img src="../assets/vsi-logo.png" alt="VSI" onerror="this.style.display='none'">
+  </div>
+  <div class="header">
+    <h1>&#128101; Styrelseuppdatering</h1>
+    <p id="header-forening">Vänskapsförbundet Sverige-Israel</p>
+  </div>
+  <div class="body" id="formularet">
+    <div class="info-box">
+      Granska styrelsens sammansättning för din förening. Ta bort personer som lämnat och lägg till nya.
+      När styrelsen är komplett — bekräfta och skicka in.
+    </div>
+
+    <!-- Nyckelfunktionärer -->
+    <div class="sektion-rubrik">
+      <span>&#127775; Nyckelfunktionärer</span>
+      <span style="font-size:10px;font-weight:400;color:#888;">ordförande, v. ordförande, kassör, sekreterare</span>
+    </div>
+    <div class="person-lista" id="lista-nf"></div>
+    <button class="lagg-till-knapp" onclick="öppnaModal('nf')">&#43; Lägg till nyckelfunktionär</button>
+
+    <!-- Ledamöter -->
+    <div class="sektion-rubrik">
+      <span>&#128101; Ledamöter</span>
+      <span style="font-size:10px;font-weight:400;color:#888;">ledamot, ombud, valberedning, revisor</span>
+    </div>
+    <div class="person-lista" id="lista-ledamot"></div>
+    <button class="lagg-till-knapp" onclick="öppnaModal('ledamot')">&#43; Lägg till ledamot</button>
+
+    <!-- Ersättare -->
+    <div class="sektion-rubrik">
+      <span>&#128257; Ersättare &amp; Revisorer</span>
+      <span style="font-size:10px;font-weight:400;color:#888;">ersättare, kongressersättare, revisor</span>
+    </div>
+    <div class="person-lista" id="lista-ersattare"></div>
+    <button class="lagg-till-knapp" onclick="öppnaModal('ersattare')">&#43; Lägg till ersättare/revisor</button>
+
+    <!-- Bekräftelse -->
+    <label class="bekr-rad">
+      <input type="checkbox" id="bekr-checkbox" onchange="uppdateraSkickaKnapp()">
+      <span>Jag bekräftar att detta är styrelsens <strong>slutliga sammansättning</strong> efter årets styrelsemöte.</span>
+    </label>
+
+    <button class="skicka-knapp" id="skicka-knapp" onclick="skickaIn()" disabled>
+      Skicka in styrelselistan
+    </button>
+    <div class="fel-box" id="fel-box"></div>
+  </div>
+
+  <div class="bekraftelse" id="bekraftelse">
+    <div class="ikon">&#9989;</div>
+    <h2>Tack!</h2>
+    <p>Styrelselistan för <strong id="bekr-forening"></strong> har skickats in.<br>
+    Vi uppdaterar registret inom kort.</p>
+  </div>
+  <div class="footer">
+    Vänskapsförbundet Sverige-Israel &nbsp;&#183;&nbsp;
+    <a href="mailto:administration@sverigeisrael.se">administration@sverigeisrael.se</a>
+  </div>
+</div>
+
+<!-- Sök-modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="stängModalBakgrund(event)">
+  <div class="modal">
+    <div class="modal-header" id="modal-rubrik">Lägg till person</div>
+    <input type="search" class="modal-sok" id="modal-sok" placeholder="Sök namn..." oninput="renderModalLista()">
+    <div class="modal-lista" id="modal-lista"></div>
+    <div class="modal-roll" id="modal-roll-wrap" style="display:none;">
+      <label>Välj roll:</label>
+      <select id="modal-roll-select"></select>
+    </div>
+    <div class="modal-knappar">
+      <button class="modal-avbryt" onclick="stängModal()">Avbryt</button>
+      <button class="modal-lagg-till" id="modal-lagg-till-btn" onclick="läggTillPerson()" disabled>Lägg till</button>
+    </div>
+  </div>
+</div>
+
+<script src="../config.js"></script>
+<script>
+const NF_ROLLER       = ['ordförande','vice ordförande','kassör','sekreterare'];
+const LEDAMOT_ROLLER  = ['ledamot','ombud','valberedning','myclubadministratör'];
+const ERSATT_ROLLER   = ['ersättare','kongressersättare','revisor'];
+
+const ROLLER_PER_SEKTION = {
+  nf:        NF_ROLLER,
+  ledamot:   LEDAMOT_ROLLER,
+  ersattare: ERSATT_ROLLER
+};
+
+const RUBRIK_PER_SEKTION = {
+  nf:        'Nyckelfunktionär',
+  ledamot:   'Ledamot',
+  ersattare: 'Ersättare/Revisor'
+};
+
+// ── Läs URL-data ──────────────────────────────────────────────────────────────
+let urlData = { forening: '', inskickat_av: '', inskickat_av_id: '', styrelse: [], alla_m: [] };
+try {
+  const raw = new URLSearchParams(window.location.search).get('d');
+  if (raw) {
+    const pad = raw + '=='.slice(0, (4 - raw.length % 4) % 4);
+    urlData = JSON.parse(decodeURIComponent(escape(atob(pad.replace(/-/g,'+').replace(/_/g,'/')))));
+  }
+} catch(e) { console.warn('URL-data fel:', e); }
+
+document.getElementById('header-forening').textContent =
+  (urlData.forening || 'Vänskapsförbundet Sverige-Israel') + ' — Styrelseuppdatering';
+document.getElementById('bekr-forening').textContent = urlData.forening || '';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+// styrelseState: [{id, fn, en, roll, sektion}]
+let styrelseState = [];
+
+// Initiera från URL-data
+(urlData.styrelse || []).forEach(p => {
+  const sek = sektion_for_roll(p.roll);
+  styrelseState.push({ id: String(p.id || ''), fn: p.fn || '', en: p.en || '', roll: p.roll || '', sektion: sek });
+});
+
+function sektion_for_roll(roll) {
+  if (NF_ROLLER.includes(roll))       return 'nf';
+  if (ERSATT_ROLLER.includes(roll))   return 'ersattare';
+  return 'ledamot';
+}
+
+function initialer(fn, en) {
+  return ((fn||'')[0]||'').toUpperCase() + ((en||'')[0]||'').toUpperCase();
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function renderAllt() {
+  ['nf','ledamot','ersattare'].forEach(sek => {
+    const lista = document.getElementById('lista-' + sek);
+    const poster = styrelseState.filter(p => p.sektion === sek);
+    if (poster.length === 0) {
+      lista.innerHTML = '<div class="tom-sektion">Inga tillagda</div>';
+      return;
+    }
+    lista.innerHTML = poster.map((p, i) => {
+      const ärNF = NF_ROLLER.includes(p.roll);
+      return `<div class="person-rad">
+        <div class="person-avatar${ärNF ? ' nf' : ''}">${esc(initialer(p.fn, p.en))}</div>
+        <div class="person-info">
+          <div class="person-namn">${esc(p.fn)} ${esc(p.en)}</div>
+          <div class="person-roll">${esc(p.roll || '—')}</div>
+        </div>
+        <button class="ta-bort-knapp" onclick="taBort('${esc(p.id)}','${esc(p.roll)}')" title="Ta bort">&#215;</button>
+      </div>`;
+    }).join('');
+  });
+  uppdateraSkickaKnapp();
+}
+
+function taBort(id, roll) {
+  styrelseState = styrelseState.filter(p => !(p.id === id && p.roll === roll));
+  renderAllt();
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+let aktivSektion = 'ledamot';
+let valdPerson   = null;
+
+function öppnaModal(sek) {
+  aktivSektion = sek;
+  valdPerson   = null;
+  document.getElementById('modal-rubrik').textContent = 'Lägg till ' + RUBRIK_PER_SEKTION[sek].toLowerCase();
+  document.getElementById('modal-sok').value = '';
+  document.getElementById('modal-roll-wrap').style.display = 'none';
+  document.getElementById('modal-lagg-till-btn').disabled = true;
+
+  const rollSel = document.getElementById('modal-roll-select');
+  rollSel.innerHTML = ROLLER_PER_SEKTION[sek].map(r =>
+    `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+
+  renderModalLista();
+  document.getElementById('modal-overlay').classList.add('aktiv');
+  setTimeout(() => document.getElementById('modal-sok').focus(), 50);
+}
+
+function stängModal() {
+  document.getElementById('modal-overlay').classList.remove('aktiv');
+  valdPerson = null;
+}
+
+function stängModalBakgrund(e) {
+  if (e.target === document.getElementById('modal-overlay')) stängModal();
+}
+
+function tillgängligaI(sek) {
+  const befintliga = new Set(styrelseState.map(p => p.id));
+  return (urlData.alla_m || []).filter(m => !befintliga.has(String(m.id || '')));
+}
+
+function renderModalLista() {
+  const sök  = document.getElementById('modal-sok').value.toLowerCase().trim();
+  const pool = tillgängligaI(aktivSektion);
+  const filtr = sök
+    ? pool.filter(m => (m.fn + ' ' + m.en).toLowerCase().includes(sök))
+    : pool;
+
+  const lista = document.getElementById('modal-lista');
+  if (filtr.length === 0) {
+    lista.innerHTML = '<div class="modal-tom">Ingen match</div>';
+    return;
+  }
+  lista.innerHTML = filtr.slice(0, 40).map(m => `
+    <div class="modal-person" onclick="välj('${esc(String(m.id||''))}','${esc(m.fn||'')}','${esc(m.en||'')}')">
+      <div class="person-avatar" style="width:30px;height:30px;font-size:11px;">${esc(initialer(m.fn,m.en))}</div>
+      <div>
+        <div class="p-namn">${esc(m.fn)} ${esc(m.en)}</div>
+      </div>
+    </div>`).join('');
+}
+
+function välj(id, fn, en) {
+  valdPerson = { id, fn, en };
+  // Markera vald
+  document.querySelectorAll('.modal-person').forEach(el => el.style.background = '');
+  document.getElementById('modal-roll-wrap').style.display = 'block';
+  document.getElementById('modal-lagg-till-btn').disabled = false;
+}
+
+function läggTillPerson() {
+  if (!valdPerson) return;
+  const roll = document.getElementById('modal-roll-select').value;
+  styrelseState.push({ ...valdPerson, roll, sektion: aktivSektion });
+  stängModal();
+  renderAllt();
+}
+
+// ── Skicka ────────────────────────────────────────────────────────────────────
+function uppdateraSkickaKnapp() {
+  const bekr = document.getElementById('bekr-checkbox').checked;
+  document.getElementById('skicka-knapp').disabled = !bekr;
+}
+
+async function skickaIn() {
+  const knapp = document.getElementById('skicka-knapp');
+  knapp.disabled = true;
+  knapp.textContent = 'Skickar…';
+  document.getElementById('fel-box').style.display = 'none';
+
+  const år = new Date().getFullYear();
+  const payload = {
+    forening:         urlData.forening || '',
+    inskickat_av_id:  String(urlData.inskickat_av_id || ''),
+    inskickat_av:     urlData.inskickat_av || '',
+    ny_styrelse:      styrelseState.map(p => ({ id: p.id, fn: p.fn, en: p.en, roll: p.roll })),
+    bekraftad:        true,
+    ar:               år,
+    skickad:          new Date().toISOString().split('T')[0]
+  };
+
+  const body = '===VSI-STYRELSE-START===\n'
+    + JSON.stringify(payload)
+    + '\n===VSI-STYRELSE-SLUT===';
+
+  try {
+    emailjs.init(EMAILJS_PUBLIC_KEY);
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      subject:   'Styrelseanmalan',
+      body:      body,
+      from_name: urlData.inskickat_av || 'Styrelseansvarig'
+    });
+    document.getElementById('formularet').style.display = 'none';
+    document.getElementById('bekraftelse').style.display = 'block';
+  } catch(e) {
+    const felBox = document.getElementById('fel-box');
+    felBox.textContent = 'Kunde inte skicka. Försök igen eller kontakta administratören. (' + e.text + ')';
+    felBox.style.display = 'block';
+    knapp.disabled = false;
+    knapp.textContent = 'Skicka in styrelselistan';
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+renderAllt();
+</script>
+</body>
+</html>
