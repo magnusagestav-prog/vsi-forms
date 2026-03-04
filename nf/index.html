@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Styrelseregister — VSI</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 16px; color: #222; }
+  .wrap { max-width: 740px; margin: 0 auto; }
+  .logo-rad { background: white; padding: 14px 24px 0; text-align: center; border-radius: 8px 8px 0 0; }
+  .logo-rad img { height: 48px; }
+  .header { background: #003f7f; padding: 16px 24px; }
+  .header h1 { color: white; font-size: 17px; margin: 0; }
+  .header p { color: #b3cde8; font-size: 13px; margin: 4px 0 0; }
+  .body { background: white; padding: 20px 24px; border: 1px solid #dde4ed; border-top: none; border-radius: 0 0 8px 8px; box-shadow: 0 2px 12px rgba(0,0,0,.1); }
+  .info-box { background: #e8f4fd; border: 1px solid #b3d8f0; border-radius: 4px; padding: 10px 14px; font-size: 13px; color: #003f7f; margin-bottom: 16px; }
+  .sok-falt { width: 100%; border: 1px solid #ccd8e8; border-radius: 4px; padding: 9px 12px; font-size: 14px; margin-bottom: 14px; background: #fafcff; }
+  .sok-falt:focus { outline: none; border-color: #003f7f; }
+  .sektion-rubrik { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #003f7f; border-bottom: 2px solid #e8f0f8; padding-bottom: 5px; margin-bottom: 10px; }
+  .medlems-lista { display: flex; flex-direction: column; gap: 8px; }
+  .person-kort { background: #f9fbfd; border: 1px solid #dde4ed; border-radius: 6px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+  .person-kort:hover { background: #e8f4fd; border-color: #003f7f; }
+  .person-avatar { width: 36px; height: 36px; border-radius: 50%; background: #003f7f; color: white; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .person-avatar.nf { background: #8b3a00; }
+  .person-info { flex: 1; min-width: 0; }
+  .person-namn { font-size: 14px; font-weight: 700; color: #222; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .person-email { font-size: 12px; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .person-roller { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+  .roll-badge { font-size: 10px; background: #003f7f; color: white; border-radius: 3px; padding: 2px 6px; white-space: nowrap; }
+  .roll-badge.nf { background: #8b3a00; }
+  .roll-badge.ingen { background: #aaa; }
+  .knapp-rad { display: flex; gap: 6px; flex-shrink: 0; }
+  .knapp { display: inline-block; border: none; border-radius: 4px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; text-decoration: none; white-space: nowrap; }
+  .knapp-blå { background: #003f7f; color: white; }
+  .knapp-blå:hover { background: #00529e; }
+  .knapp-gul { background: #8a6500; color: white; }
+  .knapp-gul:hover { background: #a07700; }
+  .tom-meddelande { text-align: center; padding: 32px; color: #888; font-size: 14px; }
+  .filter-rad { display: flex; gap: 8px; margin-bottom: 12px; }
+  .filter-knapp { font-size: 12px; padding: 5px 12px; border: 1px solid #ccd8e8; border-radius: 20px; background: white; cursor: pointer; color: #555; }
+  .filter-knapp.aktiv { background: #003f7f; color: white; border-color: #003f7f; }
+  .footer { background: #f0f4f8; padding: 10px 24px; border-top: 1px solid #dde4ec; font-size: 11px; color: #888; border-radius: 0 0 8px 8px; text-align: center; }
+  .footer a { color: #888; }
+  @media (max-width: 520px) {
+    .person-kort { flex-wrap: wrap; }
+    .knapp-rad { width: 100%; }
+    .knapp { flex: 1; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo-rad">
+    <img src="../assets/vsi-logo.png" alt="VSI" onerror="this.style.display='none'">
+  </div>
+  <div class="header">
+    <h1>&#128101; Styrelseregister</h1>
+    <p id="header-forening">Vänskapsförbundet Sverige-Israel</p>
+  </div>
+  <div class="body">
+    <div class="info-box" id="info-box">
+      &#128101; Du ser alla nuvarande styrelsemedlemmar i din förening. Klicka <strong>Öppna formulär</strong> för att se och uppdatera en persons uppgifter, eller <strong>Skicka länk</strong> för att mejla dem deras personliga uppdateringsformulär. Nyinvalda läggs till av administratören.
+    </div>
+
+    <div>
+      <div class="sektion-rubrik">Sök medlem</div>
+      <input type="search" class="sok-falt" id="sok-input" placeholder="Sök namn, e-post eller roll...">
+      <div class="filter-rad">
+        <button class="filter-knapp aktiv" data-filter="alla" onclick="byttFilter(this)">Alla</button>
+        <button class="filter-knapp" data-filter="nf" onclick="byttFilter(this)">Nyckelfunktionärer</button>
+        <button class="filter-knapp" data-filter="ovriga" onclick="byttFilter(this)">Övriga roller</button>
+      </div>
+    </div>
+
+    <div class="sektion-rubrik" style="margin-top:4px;">Föreningsmedlemmar</div>
+    <div class="medlems-lista" id="lista"></div>
+    <div class="tom-meddelande" id="tom-meddelande" style="display:none;">Ingen match</div>
+  </div>
+  <div class="footer">
+    Vänskapsförbundet Sverige-Israel &nbsp;&#183;&nbsp;
+    <a href="mailto:administration@sverigeisrael.se">administration@sverigeisrael.se</a>
+  </div>
+</div>
+
+<script src="../config.js"></script>
+<script>
+const ALLA_FUNKTIONER = [
+  'ordförande','vice ordförande','kassör','sekreterare',
+  'ledamot','ersättare','revisor','valberedning',
+  'ombud','kongressersättare','myclubadministratör'
+];
+const NF_ROLLER = ['ordförande','vice ordförande','kassör','sekreterare'];
+
+// Läs URL-param ?d=BASE64JSON
+let data = { forening: '', membri: [] };
+try {
+  const raw = new URLSearchParams(window.location.search).get('d');
+  if (raw) data = JSON.parse(atob(raw));
+} catch(e) {
+  console.warn('Kunde inte läsa URL-param:', e);
+}
+
+document.getElementById('header-forening').textContent =
+  (data.forening || 'Vänskapsförbundet Sverige-Israel') + ' — Nyckelfunktionärsportal';
+
+const forening = data.forening || '';
+const membri = (data.membri || []).sort((a, b) => {
+  const aHarNF = (a.funk || []).some(f => NF_ROLLER.includes(f));
+  const bHarNF = (b.funk || []).some(f => NF_ROLLER.includes(f));
+  if (aHarNF && !bHarNF) return -1;
+  if (!aHarNF && bHarNF) return 1;
+  const aHarFunk = (a.funk || []).length > 0;
+  const bHarFunk = (b.funk || []).length > 0;
+  if (aHarFunk && !bHarFunk) return -1;
+  if (!aHarFunk && bHarFunk) return 1;
+  return (a.en || '').localeCompare(b.en || '', 'sv');
+});
+
+let aktivtFilter = 'alla';
+
+function genereraUppdateringsURL(m) {
+  const d = {
+    id: m.id,
+    fornamn: m.fn || '',
+    efternamn: m.en || '',
+    epost: m.email || '',
+    mobil: m.mobil || '',
+    hemtel: m.hemtel || '',
+    adress: m.adr || '',
+    postnr: m.pnr || '',
+    ort: m.ort || '',
+    lokalforening: m.lokalforening || forening,
+    funktioner: m.funk || [],
+    harRiksuppdrag: m.riks || false,
+    riksgrupp: m.riks ? 'Riksnivå' : ''
+  };
+  const base = window.location.href.replace(/\/nf\/?.*/, '/uppdatera/');
+  return base + '?d=' + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+}
+
+function initialer(m) {
+  return ((m.fn || '')[0] || '') + ((m.en || '')[0] || '');
+}
+
+function renderLista(sök, filter) {
+  const lista = document.getElementById('lista');
+  const tom = document.getElementById('tom-meddelande');
+  const sökL = (sök || '').toLowerCase().trim();
+
+  const filtrerade = membri.filter(m => {
+    const ärNF = (m.funk || []).some(f => NF_ROLLER.includes(f));
+    if (filter === 'nf' && !ärNF) return false;
+    if (filter === 'ovriga' && ärNF) return false;
+    if (!sökL) return true;
+    const text = [m.fn, m.en, m.email, ...(m.funk || [])].join(' ').toLowerCase();
+    return text.includes(sökL);
+  });
+
+  lista.innerHTML = '';
+  if (filtrerade.length === 0) {
+    tom.style.display = 'block';
+    return;
+  }
+  tom.style.display = 'none';
+
+  filtrerade.forEach(m => {
+    const ärNF = (m.funk || []).some(f => NF_ROLLER.includes(f));
+    const harFunk = (m.funk || []).length > 0;
+    const updateURL = genereraUppdateringsURL(m);
+    const maitoSubject = encodeURIComponent('Uppdatera dina uppgifter — Vänskapsförbundet Sverige-Israel');
+    const mailtoBody = encodeURIComponent(
+      'Hej ' + (m.fn || '') + ',\n\n' +
+      'Klicka på länken nedan för att se och uppdatera dina uppgifter i VSI:s register:\n\n' +
+      updateURL + '\n\n' +
+      'Med vänliga hälsningar\nVSI Administration'
+    );
+    const mailtoHref = 'mailto:' + encodeURIComponent(m.email) +
+      '?subject=' + maitoSubject + '&body=' + mailtoBody;
+
+    const roller = (m.funk || []).length > 0
+      ? (m.funk || []).map(f => {
+          const ärNFRoll = NF_ROLLER.includes(f);
+          return `<span class="roll-badge${ärNFRoll ? ' nf' : ''}">${f}</span>`;
+        }).join('')
+      : '<span class="roll-badge ingen">Ingen roll</span>';
+
+    const div = document.createElement('div');
+    div.className = 'person-kort';
+    div.innerHTML = `
+      <div class="person-avatar${ärNF ? ' nf' : ''}">${initialer(m)}</div>
+      <div class="person-info">
+        <div class="person-namn">${escHtml(m.fn)} ${escHtml(m.en)}</div>
+        <div class="person-email">${escHtml(m.email)}${m.mobil ? ' · ' + escHtml(m.mobil) : ''}</div>
+        <div class="person-roller">${roller}</div>
+      </div>
+      <div class="knapp-rad">
+        <a href="${updateURL}" target="_blank" class="knapp knapp-blå">&#128203; Öppna formulär</a>
+        <a href="${mailtoHref}" class="knapp knapp-gul">&#128228; Skicka länk</a>
+      </div>`;
+    lista.appendChild(div);
+  });
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function byttFilter(el) {
+  document.querySelectorAll('.filter-knapp').forEach(k => k.classList.remove('aktiv'));
+  el.classList.add('aktiv');
+  aktivtFilter = el.dataset.filter;
+  renderLista(document.getElementById('sok-input').value, aktivtFilter);
+}
+
+document.getElementById('sok-input').addEventListener('input', e => {
+  renderLista(e.target.value, aktivtFilter);
+});
+
+renderLista('', 'alla');
+</script>
+</body>
+</html>

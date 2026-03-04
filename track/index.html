@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Vidarebefordrar…</title>
+  <style>
+    body { font-family:sans-serif; display:flex; align-items:center;
+           justify-content:center; min-height:100vh; margin:0;
+           background:#f0f4f8; color:#555; text-align:center; }
+    p { font-size:15px; }
+  </style>
+</head>
+<body>
+  <p>Vidarebefordrar till formuläret…</p>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+  <script src="../config.js"></script>
+  <script>
+    (async () => {
+      const p   = new URLSearchParams(location.search);
+      const t   = p.get('t') || '';                           // myclub_id (unik per person)
+      const n   = decodeURIComponent(p.get('n') || '');       // namn
+      const f   = decodeURIComponent(p.get('f') || '');       // förening
+      const d   = p.get('d') || '';                           // base64-data för formuläret
+
+      // Skicka spårnings-email en gång per browser (localStorage-spärr)
+      const lsKey = 'vsi_track_' + (t || btoa(d).slice(0,16));
+      if (t && !localStorage.getItem(lsKey)) {
+        try {
+          emailjs.init(EMAILJS_PUBLIC_KEY);
+          await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+            subject:   'LÄNKKLICK:' + t,
+            body:      'Länk öppnad i e-postmeddelande\n'
+                     + 'ID: ' + t + '\n'
+                     + 'Namn: ' + n + '\n'
+                     + 'Förening: ' + f + '\n'
+                     + 'Datum: ' + new Date().toISOString().split('T')[0],
+            from_name: n || 'Funktionär'
+          });
+          localStorage.setItem(lsKey, new Date().toISOString());
+        } catch (_) {
+          // Spårning misslyckades — fortsätt ändå med redirect
+        }
+      }
+
+      // Redirect till uppdateringsformuläret
+      const base = 'https://magnusagestav-prog.github.io/vsi-forms/uppdatera/';
+      location.href = d ? base + '?d=' + d : base;
+    })();
+  </script>
+</body>
+</html>
