@@ -40,6 +40,7 @@
   .modal-lista { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px; min-height: 80px; }
   .modal-person { display: flex; align-items: center; gap: 10px; border: 1px solid #dde4ed; border-radius: 6px; padding: 9px 12px; cursor: pointer; }
   .modal-person:hover { background: #e8f4fd; border-color: #003f7f; }
+  .modal-person.vald { background: #e8f4fd; border-color: #003f7f; }
   .modal-person .p-namn { font-size: 13px; font-weight: 700; }
   .modal-person .p-info { font-size: 11px; color: #888; }
   .modal-tom { font-size: 12px; color: #aaa; text-align: center; padding: 20px; }
@@ -84,34 +85,12 @@
       När styrelsen är komplett — bekräfta och skicka in.
     </div>
 
-    <!-- Nyckelfunktionärer -->
-    <div class="sektion-rubrik">
-      <span>&#127775; Nyckelfunktionärer</span>
-      <span style="font-size:10px;font-weight:400;color:#888;">ordförande, v. ordförande, kassör, sekreterare</span>
-    </div>
-    <div class="person-lista" id="lista-nf"></div>
-    <button class="lagg-till-knapp" onclick="öppnaModal('nf')">&#43; Lägg till nyckelfunktionär</button>
-
-    <!-- Ledamöter -->
-    <div class="sektion-rubrik">
-      <span>&#128101; Ledamöter</span>
-      <span style="font-size:10px;font-weight:400;color:#888;">ledamot, ombud, valberedning, revisor</span>
-    </div>
-    <div class="person-lista" id="lista-ledamot"></div>
-    <button class="lagg-till-knapp" onclick="öppnaModal('ledamot')">&#43; Lägg till ledamot</button>
-
-    <!-- Ersättare -->
-    <div class="sektion-rubrik">
-      <span>&#128257; Ersättare &amp; Revisorer</span>
-      <span style="font-size:10px;font-weight:400;color:#888;">ersättare, kongressersättare, revisor</span>
-    </div>
-    <div class="person-lista" id="lista-ersattare"></div>
-    <button class="lagg-till-knapp" onclick="öppnaModal('ersattare')">&#43; Lägg till ersättare/revisor</button>
+    <div id="sektioner-container"></div>
 
     <!-- Bekräftelse -->
     <label class="bekr-rad">
       <input type="checkbox" id="bekr-checkbox" onchange="uppdateraSkickaKnapp()">
-      <span>Jag bekräftar att detta är styrelsens <strong>slutliga sammansättning</strong> efter årets styrelsemöte.</span>
+      <span>Jag bekräftar att detta är styrelsens <strong>slutliga sammansättning</strong> efter föreningens årsmöte i år.</span>
     </label>
 
     <button class="skicka-knapp" id="skicka-knapp" onclick="skickaIn()" disabled>
@@ -151,21 +130,35 @@
 
 <script src="../config.js"></script>
 <script>
-const NF_ROLLER       = ['ordförande','vice ordförande','kassör','sekreterare'];
-const LEDAMOT_ROLLER  = ['ledamot','ombud','valberedning','myclubadministratör'];
-const ERSATT_ROLLER   = ['ersättare','kongressersättare','revisor'];
+// ── Sektionsdefinitioner (ordning = visningsordning) ──────────────────────────
+const SEKTIONER = [
+  { id: 'nf',               rubrik: 'Nyckelfunktionärer',  under: 'ordförande · v. ordförande · kassör · sekreterare',
+    roller: ['ordförande','vice ordförande','kassör','sekreterare'] },
+  { id: 'ledamot',          rubrik: 'Styrelseledamöter',   under: 'styrelseledamot',
+    roller: ['ledamot'] },
+  { id: 'ersattare',        rubrik: 'Styrelseersättare',   under: 'styrelseersättare',
+    roller: ['ersättare'] },
+  { id: 'revisor',          rubrik: 'Revisorer',           under: 'revisor',
+    roller: ['revisor'] },
+  { id: 'valberedning',     rubrik: 'Valberedning',        under: 'valberedning',
+    roller: ['valberedning'] },
+  { id: 'kongressombud',    rubrik: 'Kongressombud',       under: 'kongressombud',
+    roller: ['kongressombud'] },
+  { id: 'kongressersattare',rubrik: 'Kongressersättare',   under: 'kongressersättare',
+    roller: ['kongressersättare'] },
+];
 
-const ROLLER_PER_SEKTION = {
-  nf:        NF_ROLLER,
-  ledamot:   LEDAMOT_ROLLER,
-  ersattare: ERSATT_ROLLER
-};
-
-const RUBRIK_PER_SEKTION = {
-  nf:        'Nyckelfunktionär',
-  ledamot:   'Ledamot',
-  ersattare: 'Ersättare/Revisor'
-};
+function sektion_for_roll(roll) {
+  const r = (roll || '').toLowerCase();
+  if (['ordförande','vice ordförande','kassör','sekreterare'].includes(r)) return 'nf';
+  if (['ledamot'].includes(r))                                             return 'ledamot';
+  if (['ersättare','styrelseersättare'].includes(r))                       return 'ersattare';
+  if (['revisor'].includes(r))                                             return 'revisor';
+  if (['valberedning'].includes(r))                                        return 'valberedning';
+  if (['kongressombud','ombud'].includes(r))                               return 'kongressombud';
+  if (['kongressersättare'].includes(r))                                   return 'kongressersattare';
+  return 'ledamot';
+}
 
 // ── Läs URL-data ──────────────────────────────────────────────────────────────
 let urlData = { forening: '', inskickat_av: '', inskickat_av_id: '', styrelse: [], alla_m: [] };
@@ -181,21 +174,26 @@ document.getElementById('header-forening').textContent =
   (urlData.forening || 'Vänskapsförbundet Sverige-Israel') + ' — Styrelseuppdatering';
 document.getElementById('bekr-forening').textContent = urlData.forening || '';
 
+// ── Bygg sektions-HTML dynamiskt ──────────────────────────────────────────────
+function byggSektioner() {
+  const container = document.getElementById('sektioner-container');
+  container.innerHTML = SEKTIONER.map(s => `
+    <div class="sektion-rubrik">
+      <span>${s.rubrik}</span>
+      <span style="font-size:10px;font-weight:400;color:#888;">${s.under}</span>
+    </div>
+    <div class="person-lista" id="lista-${s.id}"></div>
+    <button class="lagg-till-knapp" onclick="öppnaModal('${s.id}')">&#43; Lägg till</button>
+  `).join('');
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
-// styrelseState: [{id, fn, en, roll, sektion}]
 let styrelseState = [];
 
-// Initiera från URL-data
 (urlData.styrelse || []).forEach(p => {
   const sek = sektion_for_roll(p.roll);
   styrelseState.push({ id: String(p.id || ''), fn: p.fn || '', en: p.en || '', roll: p.roll || '', sektion: sek });
 });
-
-function sektion_for_roll(roll) {
-  if (NF_ROLLER.includes(roll))       return 'nf';
-  if (ERSATT_ROLLER.includes(roll))   return 'ersattare';
-  return 'ledamot';
-}
 
 function initialer(fn, en) {
   return ((fn||'')[0]||'').toUpperCase() + ((en||'')[0]||'').toUpperCase();
@@ -207,15 +205,16 @@ function esc(s) {
 
 // ── Render ────────────────────────────────────────────────────────────────────
 function renderAllt() {
-  ['nf','ledamot','ersattare'].forEach(sek => {
-    const lista = document.getElementById('lista-' + sek);
-    const poster = styrelseState.filter(p => p.sektion === sek);
+  SEKTIONER.forEach(s => {
+    const lista = document.getElementById('lista-' + s.id);
+    if (!lista) return;
+    const poster = styrelseState.filter(p => p.sektion === s.id);
     if (poster.length === 0) {
       lista.innerHTML = '<div class="tom-sektion">Inga tillagda</div>';
       return;
     }
-    lista.innerHTML = poster.map((p, i) => {
-      const ärNF = NF_ROLLER.includes(p.roll);
+    lista.innerHTML = poster.map(p => {
+      const ärNF = s.id === 'nf';
       return `<div class="person-rad">
         <div class="person-avatar${ärNF ? ' nf' : ''}">${esc(initialer(p.fn, p.en))}</div>
         <div class="person-info">
@@ -239,16 +238,25 @@ let aktivSektion = 'ledamot';
 let valdPerson   = null;
 
 function öppnaModal(sek) {
+  const s = SEKTIONER.find(x => x.id === sek);
+  if (!s) return;
   aktivSektion = sek;
   valdPerson   = null;
-  document.getElementById('modal-rubrik').textContent = 'Lägg till ' + RUBRIK_PER_SEKTION[sek].toLowerCase();
+
+  document.getElementById('modal-rubrik').textContent = 'Lägg till – ' + s.rubrik;
   document.getElementById('modal-sok').value = '';
-  document.getElementById('modal-roll-wrap').style.display = 'none';
   document.getElementById('modal-lagg-till-btn').disabled = true;
 
-  const rollSel = document.getElementById('modal-roll-select');
-  rollSel.innerHTML = ROLLER_PER_SEKTION[sek].map(r =>
-    `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+  // Visa rolldropdown bara om sektionen har flera roller
+  const rollWrap = document.getElementById('modal-roll-wrap');
+  const rollSel  = document.getElementById('modal-roll-select');
+  if (s.roller.length > 1) {
+    rollSel.innerHTML = s.roller.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join('');
+    rollWrap.style.display = 'block';
+  } else {
+    rollSel.innerHTML = `<option value="${esc(s.roller[0])}">${esc(s.roller[0])}</option>`;
+    rollWrap.style.display = 'none';
+  }
 
   renderModalLista();
   document.getElementById('modal-overlay').classList.add('aktiv');
@@ -264,14 +272,13 @@ function stängModalBakgrund(e) {
   if (e.target === document.getElementById('modal-overlay')) stängModal();
 }
 
-function tillgängligaI(sek) {
-  const befintliga = new Set(styrelseState.map(p => p.id));
-  return (urlData.alla_m || []).filter(m => !befintliga.has(String(m.id || '')));
-}
-
 function renderModalLista() {
   const sök  = document.getElementById('modal-sok').value.toLowerCase().trim();
-  const pool = tillgängligaI(aktivSektion);
+  // Sök bland ALLA föreningsmedlemmar (alla_m), exkl. redan tillagda i DENNA sektion + roll
+  const befintligaISektion = new Set(
+    styrelseState.filter(p => p.sektion === aktivSektion).map(p => p.id)
+  );
+  const pool = (urlData.alla_m || []).filter(m => !befintligaISektion.has(String(m.id || '')));
   const filtr = sök
     ? pool.filter(m => (m.fn + ' ' + m.en).toLowerCase().includes(sök))
     : pool;
@@ -281,8 +288,9 @@ function renderModalLista() {
     lista.innerHTML = '<div class="modal-tom">Ingen match</div>';
     return;
   }
-  lista.innerHTML = filtr.slice(0, 40).map(m => `
-    <div class="modal-person" onclick="välj('${esc(String(m.id||''))}','${esc(m.fn||'')}','${esc(m.en||'')}')">
+  lista.innerHTML = filtr.slice(0, 60).map(m => `
+    <div class="modal-person" id="mp-${esc(String(m.id||''))}"
+         onclick="välj('${esc(String(m.id||''))}','${esc(m.fn||'')}','${esc(m.en||'')}')">
       <div class="person-avatar" style="width:30px;height:30px;font-size:11px;">${esc(initialer(m.fn,m.en))}</div>
       <div>
         <div class="p-namn">${esc(m.fn)} ${esc(m.en)}</div>
@@ -292,16 +300,17 @@ function renderModalLista() {
 
 function välj(id, fn, en) {
   valdPerson = { id, fn, en };
-  // Markera vald
-  document.querySelectorAll('.modal-person').forEach(el => el.style.background = '');
-  document.getElementById('modal-roll-wrap').style.display = 'block';
+  document.querySelectorAll('.modal-person').forEach(el => el.classList.remove('vald'));
+  const el = document.getElementById('mp-' + id);
+  if (el) el.classList.add('vald');
   document.getElementById('modal-lagg-till-btn').disabled = false;
 }
 
 function läggTillPerson() {
   if (!valdPerson) return;
   const roll = document.getElementById('modal-roll-select').value;
-  styrelseState.push({ ...valdPerson, roll, sektion: aktivSektion });
+  const sek  = aktivSektion;
+  styrelseState.push({ ...valdPerson, roll, sektion: sek });
   stängModal();
   renderAllt();
 }
@@ -344,7 +353,7 @@ async function skickaIn() {
     document.getElementById('bekraftelse').style.display = 'block';
   } catch(e) {
     const felBox = document.getElementById('fel-box');
-    felBox.textContent = 'Kunde inte skicka. Försök igen eller kontakta administratören. (' + e.text + ')';
+    felBox.textContent = 'Kunde inte skicka. Försök igen eller kontakta administratören. (' + (e.text||e.message||e) + ')';
     felBox.style.display = 'block';
     knapp.disabled = false;
     knapp.textContent = 'Skicka in styrelselistan';
@@ -352,6 +361,7 @@ async function skickaIn() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
+byggSektioner();
 renderAllt();
 </script>
 </body>
