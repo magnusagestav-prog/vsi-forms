@@ -167,7 +167,7 @@ const ALLA_FUNKTIONER = [
 let original = {};
 try {
   const raw = new URLSearchParams(window.location.search).get('d');
-  if (raw) original = JSON.parse(atob(raw));
+  if (raw) original = JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g,'+').replace(/_/g,'/')))));
 } catch(e) {
   console.warn('Kunde inte läsa URL-param:', e);
 }

@@ -96,7 +96,7 @@ const NF_ROLLER = ['ordförande','vice ordförande','kassör','sekreterare'];
 let data = { forening: '', membri: [] };
 try {
   const raw = new URLSearchParams(window.location.search).get('d');
-  if (raw) data = JSON.parse(atob(raw));
+  if (raw) data = JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g,'+').replace(/_/g,'/')))));
 } catch(e) {
   console.warn('Kunde inte läsa URL-param:', e);
 }
