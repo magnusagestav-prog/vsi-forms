@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Styrelseuppdatering — VSI</title>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2/dist/pako.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 16px; color: #222; }
@@ -165,8 +166,15 @@ let urlData = { forening: '', inskickat_av: '', inskickat_av_id: '', styrelse: [
 try {
   const raw = new URLSearchParams(window.location.search).get('d');
   if (raw) {
-    const pad = raw + '=='.slice(0, (4 - raw.length % 4) % 4);
-    urlData = JSON.parse(decodeURIComponent(escape(atob(pad.replace(/-/g,'+').replace(/_/g,'/')))));
+    const isCompressed = raw.startsWith('z');
+    const b64 = (isCompressed ? raw.slice(1) : raw).replace(/-/g,'+').replace(/_/g,'/');
+    const pad = b64 + '=='.slice(0, (4 - b64.length % 4) % 4);
+    if (isCompressed) {
+      const bytes = Uint8Array.from(atob(pad), c => c.charCodeAt(0));
+      urlData = JSON.parse(pako.inflate(bytes, { to: 'string' }));
+    } else {
+      urlData = JSON.parse(decodeURIComponent(escape(atob(pad))));
+    }
   }
 } catch(e) { console.warn('URL-data fel:', e); }
 
