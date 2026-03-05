@@ -92,10 +92,12 @@ const ALLA_FUNKTIONER = [
 ];
 const NF_ROLLER = ['ordförande','vice ordförande','kassör','sekreterare'];
 
-// Läs URL-param ?d=BASE64JSON
+// Läs URL-param: hash (#d=) prioriteras över query (?d=) för att undvika URI Too Long
 let data = { forening: '', membri: [] };
 try {
-  const raw = new URLSearchParams(window.location.search).get('d');
+  const hashRaw  = window.location.hash.startsWith('#d=') ? window.location.hash.slice(3) : null;
+  const queryRaw = new URLSearchParams(window.location.search).get('d');
+  const raw = hashRaw || queryRaw;
   if (raw) data = JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g,'+').replace(/_/g,'/')))));
 } catch(e) {
   console.warn('Kunde inte läsa URL-param:', e);
@@ -136,7 +138,7 @@ function genereraUppdateringsURL(m) {
     riksgrupp: m.riks ? 'Riksnivå' : ''
   };
   const base = window.location.href.replace(/\/nf\/?.*/, '/uppdatera/');
-  return base + '?d=' + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+  return base + '#d=' + btoa(unescape(encodeURIComponent(JSON.stringify(d))));
 }
 
 function initialer(m) {

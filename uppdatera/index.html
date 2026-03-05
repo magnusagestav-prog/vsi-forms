@@ -163,10 +163,12 @@ const ALLA_FUNKTIONER = [
   'ombud','kongressersättare','myclubadministratör'
 ];
 
-// Läs URL-param ?d=BASE64JSON
+// Läs URL-param: hash (#d=) prioriteras över query (?d=) för att undvika URI Too Long
 let original = {};
 try {
-  const raw = new URLSearchParams(window.location.search).get('d');
+  const hashRaw  = window.location.hash.startsWith('#d=') ? window.location.hash.slice(3) : null;
+  const queryRaw = new URLSearchParams(window.location.search).get('d');
+  const raw = hashRaw || queryRaw;
   if (raw) original = JSON.parse(decodeURIComponent(escape(atob(raw.replace(/-/g,'+').replace(/_/g,'/')))));
 } catch(e) {
   console.warn('Kunde inte läsa URL-param:', e);
