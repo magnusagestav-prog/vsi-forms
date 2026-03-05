@@ -122,6 +122,7 @@
       <label>Välj roll:</label>
       <select id="modal-roll-select"></select>
     </div>
+    <div id="modal-konflikt-varn" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:4px;padding:8px 12px;font-size:12px;color:#856404;margin-top:10px;"></div>
     <div class="modal-knappar">
       <button class="modal-avbryt" onclick="stängModal()">Avbryt</button>
       <button class="modal-lagg-till" id="modal-lagg-till-btn" onclick="läggTillPerson()" disabled>Lägg till</button>
@@ -164,7 +165,8 @@ function sektion_for_roll(roll) {
 // ── Läs URL-data ──────────────────────────────────────────────────────────────
 let urlData = { forening: '', inskickat_av: '', inskickat_av_id: '', styrelse: [], alla_m: [] };
 try {
-  const raw = new URLSearchParams(window.location.search).get('d');
+  const raw = new URLSearchParams(window.location.hash.slice(1)).get('d')
+           || new URLSearchParams(window.location.search).get('d');
   if (raw) {
     const isCompressed = raw.startsWith('z');
     const b64 = (isCompressed ? raw.slice(1) : raw).replace(/-/g,'+').replace(/_/g,'/');
@@ -194,6 +196,18 @@ function byggSektioner() {
     <button class="lagg-till-knapp" onclick="öppnaModal('${s.id}')">&#43; Lägg till</button>
   `).join('');
 }
+
+// ── Konfliktregler: vilka sektioner är ömsesidigt exklusiva ──────────────────
+// En person kan INTE ha roller i två sektioner om de båda finns i varandras lista.
+const KONFLIKTER = {
+  nf:                 ['nf', 'ledamot', 'ersattare', 'revisor', 'valberedning'],
+  ledamot:            ['nf', 'ledamot', 'ersattare', 'revisor', 'valberedning'],
+  ersattare:          ['nf', 'ledamot', 'ersattare', 'revisor', 'valberedning'],
+  revisor:            ['nf', 'ledamot', 'ersattare', 'revisor', 'valberedning'],
+  valberedning:       ['nf', 'ledamot', 'ersattare', 'revisor', 'valberedning'],
+  kongressombud:      ['kongressombud', 'kongressersattare'],
+  kongressersattare:  ['kongressombud', 'kongressersattare'],
+};
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let styrelseState = [];
@@ -273,6 +287,7 @@ function öppnaModal(sek) {
 
 function stängModal() {
   document.getElementById('modal-overlay').classList.remove('aktiv');
+  document.getElementById('modal-konflikt-varn').style.display = 'none';
   valdPerson = null;
 }
 
@@ -290,10 +305,11 @@ function renderModalLista() {
     return;
   }
 
-  // Befintliga roller för personen i hela styrelseState (alla sektioner)
+  // Exkludera bara personer redan tillagda i SAMMA sektion
   const befintligaISektion = new Set(
-    styrelseState.filter(p => p.sektion === aktivSektion).map(p => p.id)
+    styrelseState.filter(p => p.sektion === aktivSektion).map(p => String(p.id))
   );
+  // Befintliga roller för personen i hela styrelseState (för visning av nuv. roll)
   const rollerPerPerson = {};
   styrelseState.forEach(p => {
     if (!rollerPerPerson[p.id]) rollerPerPerson[p.id] = [];
@@ -301,7 +317,16 @@ function renderModalLista() {
   });
 
   const pool = (urlData.alla_m || []).filter(m => !befintligaISektion.has(String(m.id || '')));
-  const filtr = pool.filter(m => (m.fn + ' ' + m.en).toLowerCase().includes(sök));
+  const filtr = pool.filter(m => {
+    const fnEn  = (m.fn + ' ' + m.en).toLowerCase();
+    const enFn  = (m.en + ' ' + m.fn).toLowerCase();
+    const epost = (m.email || '').toLowerCase();
+    const mid   = String(m.id || '');
+    const pnr   = String(m.pnr || '');            // YYYYMMDD
+    const yymmdd = pnr.length >= 8 ? pnr.slice(2) : pnr; // YYMMDD
+    return fnEn.includes(sök) || enFn.includes(sök) || epost.includes(sök)
+        || mid === sök || pnr.includes(sök) || yymmdd.startsWith(sök);
+  });
 
   if (filtr.length === 0) {
     lista.innerHTML = '<div class="modal-tom">Ingen match</div>';
@@ -331,8 +356,20 @@ function välj(id, fn, en) {
 
 function läggTillPerson() {
   if (!valdPerson) return;
-  const roll = document.getElementById('modal-roll-select').value;
   const sek  = aktivSektion;
+  const konfliktSek = new Set(KONFLIKTER[sek] || [sek]);
+  const befintligRoll = styrelseState.find(
+    p => String(p.id) === String(valdPerson.id) && konfliktSek.has(p.sektion)
+  );
+  const varnEl = document.getElementById('modal-konflikt-varn');
+  if (befintligRoll) {
+    const sNamn = SEKTIONER.find(x => x.id === befintligRoll.sektion)?.rubrik || befintligRoll.sektion;
+    varnEl.textContent = `${valdPerson.fn} ${valdPerson.en} är redan tillagd som ${befintligRoll.roll} (${sNamn}) och kan inte ha denna roll samtidigt.`;
+    varnEl.style.display = 'block';
+    return;
+  }
+  varnEl.style.display = 'none';
+  const roll = document.getElementById('modal-roll-select').value;
   styrelseState.push({ ...valdPerson, roll, sektion: sek });
   stängModal();
   renderAllt();
