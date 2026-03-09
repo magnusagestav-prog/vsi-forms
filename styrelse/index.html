@@ -163,7 +163,7 @@ function sektion_for_roll(roll) {
 }
 
 // ── Läs URL-data ──────────────────────────────────────────────────────────────
-let urlData = { forening: '', inskickat_av: '', inskickat_av_id: '', styrelse: [], alla_m: [] };
+let urlData = { forening: '', inskickat_av: '', inskickat_av_id: '', styrelse: [], alla_m: [], max_ombud: 2, max_ersattare: 10 };
 try {
   const raw = new URLSearchParams(window.location.hash.slice(1)).get('d')
            || new URLSearchParams(window.location.search).get('d');
@@ -185,16 +185,44 @@ document.getElementById('header-forening').textContent =
 document.getElementById('bekr-forening').textContent = urlData.forening || '';
 
 // ── Bygg sektions-HTML dynamiskt ──────────────────────────────────────────────
+function maxFörSektion(sektionId) {
+  if (sektionId === 'kongressombud')    return urlData.max_ombud     ?? 2;
+  if (sektionId === 'kongressersattare') return urlData.max_ersattare ?? 10;
+  return null; // ingen begränsning
+}
+
 function byggSektioner() {
   const container = document.getElementById('sektioner-container');
-  container.innerHTML = SEKTIONER.map(s => `
+  container.innerHTML = SEKTIONER.map(s => {
+    const max = maxFörSektion(s.id);
+    const maxInfo = max !== null
+      ? `<span id="max-info-${s.id}" style="font-size:10px;font-weight:400;color:#888;">0 / ${max}</span>`
+      : '';
+    return `
     <div class="sektion-rubrik">
       <span>${s.rubrik}</span>
       <span style="font-size:10px;font-weight:400;color:#888;">${s.under}</span>
+      ${maxInfo}
     </div>
     <div class="person-lista" id="lista-${s.id}"></div>
-    <button class="lagg-till-knapp" onclick="öppnaModal('${s.id}')">&#43; Lägg till</button>
-  `).join('');
+    <button class="lagg-till-knapp" id="lagg-till-${s.id}" onclick="öppnaModal('${s.id}')">&#43; Lägg till</button>
+  `;
+  }).join('');
+}
+
+function uppdateraMaxInfo() {
+  ['kongressombud','kongressersattare'].forEach(sId => {
+    const max    = maxFörSektion(sId);
+    if (max === null) return;
+    const antal  = styrelseState.filter(p => p.sektion === sId).length;
+    const infoEl = document.getElementById('max-info-' + sId);
+    const knapp  = document.getElementById('lagg-till-' + sId);
+    if (infoEl) {
+      infoEl.textContent = `${antal} / ${max}`;
+      infoEl.style.color = antal >= max ? '#e04040' : '#888';
+    }
+    if (knapp) knapp.disabled = antal >= max;
+  });
 }
 
 // ── Konfliktregler: vilka sektioner är ömsesidigt exklusiva ──────────────────
@@ -248,6 +276,7 @@ function renderAllt() {
     }).join('');
   });
   uppdateraSkickaKnapp();
+  uppdateraMaxInfo();
 }
 
 function taBort(id, roll) {
@@ -262,6 +291,11 @@ let valdPerson   = null;
 function öppnaModal(sek) {
   const s = SEKTIONER.find(x => x.id === sek);
   if (!s) return;
+  const max = maxFörSektion(sek);
+  if (max !== null && styrelseState.filter(p => p.sektion === sek).length >= max) {
+    alert(`Max ${max} ${s.rubrik.toLowerCase()} tillåtna för ${urlData.forening || 'denna förening'}.`);
+    return;
+  }
   aktivSektion = sek;
   valdPerson   = null;
 
