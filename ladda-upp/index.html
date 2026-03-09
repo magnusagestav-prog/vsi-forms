@@ -121,12 +121,13 @@ const forening   = decodeURIComponent(p.get('f') || '');
 const doktypId   = p.get('d') || '';
 const ar         = p.get('a') || new Date().getFullYear().toString();
 const doktypNamn = decodeURIComponent(p.get('n') || 'Dokument');
+const epost      = decodeURIComponent(p.get('e') || '');
 
 document.getElementById('dok-typ').textContent      = doktypNamn + (ar !== 'engång' ? ' ' + ar : '');
 document.getElementById('dok-forening').textContent = forening;
 document.getElementById('dok-ar').textContent       = ar !== 'engång' ? 'Verksamhetsår ' + ar : 'Engångsdokument';
 document.getElementById('h-forening').value         = forening;
-document.getElementById('h-subject').value          = `[VSI:${forening}|${doktypId}|${ar}]`;
+document.getElementById('h-subject').value          = `[VSI:${forening}|${doktypId}|${ar}|${epost}]`;
 
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
