@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ladda upp dokument — VSI</title>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pako@2/dist/pako.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 16px; color: #222; }
@@ -201,15 +202,51 @@ function läggTillOmbud(namn, roll) {
   document.getElementById('ombud-sokresultat').style.display = 'none';
 }
 
-// Sökfält — manuell inmatning (enter eller klick)
-document.getElementById('ombud-sok')?.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return;
-  e.preventDefault();
-  const namn = e.target.value.trim();
-  if (!namn) return;
-  // Välj roll: ombud om inte fullt, annars ersättare
+// Ladda och dekomprimera medlemsdata från URL-hash
+let alleM = [];
+try {
+  const hashVal = new URLSearchParams(window.location.hash.slice(1)).get('d');
+  if (hashVal) {
+    const isZ = hashVal.startsWith('z');
+    const b64 = (isZ ? hashVal.slice(1) : hashVal).replace(/-/g,'+').replace(/_/g,'/');
+    const pad = b64 + '=='.slice(0,(4-b64.length%4)%4);
+    const bytes = Uint8Array.from(atob(pad), c => c.charCodeAt(0));
+    alleM = JSON.parse(isZ ? pako.inflate(bytes, {to:'string'}) : new TextDecoder().decode(bytes));
+  }
+} catch(e) { console.warn('Kunde inte läsa medlemsdata:', e); }
+
+// Sökfält mot medlemsregistret (eller fri text om listan saknas)
+const sokEl  = document.getElementById('ombud-sok');
+const sokRes = document.getElementById('ombud-sokresultat');
+
+sokEl?.addEventListener('input', () => {
+  const q = sokEl.value.toLowerCase().trim();
+  if (!q || alleM.length === 0) { sokRes.style.display = 'none'; return; }
+  const träffar = alleM.filter(m => `${m.fn} ${m.en}`.toLowerCase().includes(q)).slice(0, 10);
+  if (!träffar.length) { sokRes.style.display = 'none'; return; }
+  sokRes.innerHTML = träffar.map(m =>
+    `<div style="padding:6px 10px;cursor:pointer;" data-namn="${m.fn} ${m.en}"
+       onmouseover="this.style.background='#e8f0f8'" onmouseout="this.style.background=''"
+       onclick="välj('${(m.fn+' '+m.en).replace(/'/g,'\\\'')}')">${m.fn} ${m.en}</div>`
+  ).join('');
+  sokRes.style.display = '';
+});
+
+function välj(namn) {
   const roll = ombudLista.filter(o => o.roll === 'ombud').length < maxOmbud ? 'ombud' : 'ersättare';
   läggTillOmbud(namn, roll);
+}
+
+sokEl?.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const namn = sokEl.value.trim();
+  if (!namn) return;
+  välj(namn);
+});
+
+document.addEventListener('click', e => {
+  if (!sokEl?.contains(e.target) && !sokRes?.contains(e.target)) sokRes.style.display = 'none';
 });
 
 const arSuffix = (ar !== 'engång' && !doktypNamn.endsWith(ar)) ? ' ' + ar : '';
