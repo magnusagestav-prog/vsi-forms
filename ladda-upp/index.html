@@ -68,6 +68,29 @@
       <input type="hidden" name="from_name" id="h-forening">
 
       <div class="steg">
+        <!-- Ombud-sektion (visas bara för ombudsbekräftelse) -->
+        <div class="steg-rad" id="ombud-sektion" style="display:none;">
+          <div class="steg-nr" id="steg-ombud-nr">1</div>
+          <div class="steg-innehall">
+            <p>Ange vilka som utsetts till <strong>kongressombud</strong> och <strong>ombudsersättare</strong></p>
+            <div id="ombud-sokfalt" style="margin-bottom:10px;">
+              <input type="text" id="ombud-sok" placeholder="Sök namn bland föreningens medlemmar..."
+                style="width:100%;padding:8px 10px;border:1px solid #b3c8e0;border-radius:5px;font-size:13px;box-sizing:border-box;">
+              <div id="ombud-sokresultat" style="background:white;border:1px solid #b3c8e0;border-radius:4px;max-height:160px;overflow-y:auto;display:none;margin-top:2px;font-size:12px;"></div>
+            </div>
+            <div style="margin-bottom:8px;">
+              <strong style="font-size:12px;color:#003f7f;">Kongressombud</strong>
+              <span id="ombud-rakn" style="font-size:11px;color:#888;margin-left:6px;">0 / 0</span>
+              <div id="ombud-lista" style="margin-top:4px;display:flex;flex-direction:column;gap:4px;"></div>
+            </div>
+            <div>
+              <strong style="font-size:12px;color:#003f7f;">Ombudsersättare</strong>
+              <span id="ers-rakn" style="font-size:11px;color:#888;margin-left:6px;">0 / 10</span>
+              <div id="ers-lista" style="margin-top:4px;display:flex;flex-direction:column;gap:4px;"></div>
+            </div>
+          </div>
+        </div>
+
         <div class="steg-rad">
           <div class="steg-nr" id="steg1-nr">1</div>
           <div class="steg-innehall">
@@ -122,8 +145,75 @@ const doktypId   = p.get('d') || '';
 const ar         = p.get('a') || new Date().getFullYear().toString();
 const doktypNamn = decodeURIComponent(p.get('n') || 'Dokument');
 const epost      = decodeURIComponent(p.get('e') || '');
+const maxOmbud      = parseInt(p.get('mo') || '0');
+const maxErsattare  = parseInt(p.get('me') || '10');
 
-document.getElementById('dok-typ').textContent      = doktypNamn + (ar !== 'engång' ? ' ' + ar : '');
+// ── Ombud-logik ──────────────────────────────────────────────────────────────
+const ärOmbud = doktypId === 'ombudsbekräftelse';
+let ombudLista    = []; // {namn, roll: 'ombud'|'ersättare'}
+
+if (ärOmbud && maxOmbud > 0) {
+  document.getElementById('ombud-sektion').style.display = '';
+  // Justera stegnummer (+1 på allt efter)
+  document.getElementById('steg-ombud-nr').textContent = '1';
+  document.getElementById('steg1-nr').textContent      = '2';
+  document.getElementById('steg2-nr').textContent      = '3';
+  uppdateraOmbudRäknare();
+}
+
+function uppdateraOmbudRäknare() {
+  const ombud = ombudLista.filter(o => o.roll === 'ombud');
+  const ers   = ombudLista.filter(o => o.roll === 'ersättare');
+  document.getElementById('ombud-rakn').textContent = `${ombud.length} / ${maxOmbud}`;
+  document.getElementById('ers-rakn').textContent   = `${ers.length} / ${maxErsattare}`;
+  renderaOmbudListor();
+}
+
+function renderaOmbudListor() {
+  ['ombud','ersättare'].forEach(roll => {
+    const el = document.getElementById(roll === 'ombud' ? 'ombud-lista' : 'ers-lista');
+    const poster = ombudLista.filter(o => o.roll === roll);
+    el.innerHTML = poster.length === 0
+      ? `<div style="font-size:11px;color:#aaa;font-style:italic;">Inga tillagda</div>`
+      : poster.map((o, i) => `<div style="display:flex;align-items:center;gap:6px;background:#f0f6ff;border:1px solid #c8dcf0;border-radius:4px;padding:4px 8px;font-size:12px;">
+          <span style="flex:1;">${o.namn}</span>
+          <button onclick="taBortOmbud('${roll}',${i})" style="background:none;border:none;color:#c00;cursor:pointer;font-size:14px;padding:0 2px;">×</button>
+        </div>`).join('');
+  });
+}
+
+function taBortOmbud(roll, idx) {
+  const poster = ombudLista.filter(o => o.roll === roll);
+  const namn = poster[idx]?.namn;
+  ombudLista = ombudLista.filter(o => !(o.roll === roll && o.namn === namn));
+  uppdateraOmbudRäknare();
+}
+
+function läggTillOmbud(namn, roll) {
+  if (!namn.trim()) return;
+  const max = roll === 'ombud' ? maxOmbud : maxErsattare;
+  const antal = ombudLista.filter(o => o.roll === roll).length;
+  if (antal >= max) { alert(`Max ${max} ${roll === 'ombud' ? 'ombud' : 'ersättare'} tillåtna.`); return; }
+  if (ombudLista.some(o => o.namn === namn)) { alert(`${namn} är redan tillagd.`); return; }
+  ombudLista.push({ namn, roll });
+  uppdateraOmbudRäknare();
+  document.getElementById('ombud-sok').value = '';
+  document.getElementById('ombud-sokresultat').style.display = 'none';
+}
+
+// Sökfält — manuell inmatning (enter eller klick)
+document.getElementById('ombud-sok')?.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const namn = e.target.value.trim();
+  if (!namn) return;
+  // Välj roll: ombud om inte fullt, annars ersättare
+  const roll = ombudLista.filter(o => o.roll === 'ombud').length < maxOmbud ? 'ombud' : 'ersättare';
+  läggTillOmbud(namn, roll);
+});
+
+const arSuffix = (ar !== 'engång' && !doktypNamn.endsWith(ar)) ? ' ' + ar : '';
+document.getElementById('dok-typ').textContent      = doktypNamn + arSuffix;
 document.getElementById('dok-forening').textContent = forening;
 document.getElementById('dok-ar').textContent       = ar !== 'engång' ? 'Verksamhetsår ' + ar : 'Engångsdokument';
 document.getElementById('h-forening').value         = forening;
@@ -208,6 +298,15 @@ uploadKnapp.addEventListener('click', async () => {
     progressFill.style.width = '90%';
     progressTxt.textContent  = 'Skickar avisering...';
 
+    const ombudRader = ärOmbud && ombudLista.length > 0 ? [
+      '',
+      'KONGRESSOMBUD:',
+      ...ombudLista.filter(o => o.roll === 'ombud').map((o, i) => `  Ombud ${i+1}: ${o.namn}`),
+      'OMBUDSERSÄTTARE:',
+      ...ombudLista.filter(o => o.roll === 'ersättare').map((o, i) => `  Ersättare ${i+1}: ${o.namn}`),
+      `[VSI-OMBUD:${JSON.stringify(ombudLista)}]`,
+    ] : [];
+
     document.getElementById('h-body').value = [
       'DOKUMENTUPPLADDNING - VSI',
       '========================',
@@ -217,6 +316,7 @@ uploadKnapp.addEventListener('click', async () => {
       'Datum: '   + new Date().toLocaleDateString('sv-SE'),
       '',
       ...urls.map(u => `[VSI-DOK-URL:${u}]`),
+      ...ombudRader,
     ].join('\n');
 
     await emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, '#upload-form');
