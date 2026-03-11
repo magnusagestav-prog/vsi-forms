@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funktionärsregister — VSI</title>
+<script src="https://cdn.jsdelivr.net/npm/pako@2/dist/pako.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: Arial, sans-serif; background: #f0f4f8; padding: 16px; color: #222; }
+.kort { max-width: 640px; margin: 0 auto; background: white; border-radius: 8px;
+        box-shadow: 0 2px 12px rgba(0,0,0,.12); overflow: hidden; }
+.logo-rad { background: white; padding: 14px 24px 0; text-align: center; }
+.logo-rad img { height: 48px; }
+.header { background: #003f7f; padding: 16px 24px; color: white; }
+.header h1 { font-size: 18px; font-weight: 700; }
+.header p { font-size: 12px; color: #b3cde8; margin-top: 4px; }
+.readonly-badge { display: inline-block; background: #1a3a5a; color: #7db8e8;
+  font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-top: 6px; letter-spacing: 0.05em; }
+.sektion { padding: 16px 24px; border-bottom: 1px solid #e8edf2; }
+.sektion-rubrik { font-size: 10px; font-weight: 700; color: #556a85;
+  letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+.person-rad { display: flex; align-items: center; gap: 10px; padding: 6px 0;
+  border-bottom: 1px solid #f0f4f8; }
+.person-rad:last-child { border-bottom: none; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: #dce8f5;
+  color: #003f7f; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0; }
+.person-namn { font-size: 13px; font-weight: 600; color: #222; }
+.person-roll { font-size: 11px; color: #556a85; }
+.tom { font-size: 12px; color: #aaa; font-style: italic; padding: 6px 0; }
+.footer { padding: 12px 24px; background: #f8fafc; text-align: center;
+  font-size: 11px; color: #8a9ab0; }
+.uppdaterad { font-size: 10px; color: #8a9ab0; margin-top: 2px; }
+</style>
+</head>
+<body>
+<div class="kort">
+  <div class="logo-rad">
+    <img src="https://magnusagestav-prog.github.io/vsi-forms/assets/vsi-logo.png" alt="VSI">
+  </div>
+  <div class="header">
+    <h1 id="rubrik">Funktionärsregister</h1>
+    <p id="underrubrik">Vänskapsförbundet Sverige-Israel</p>
+    <span class="readonly-badge">🔒 Skrivskyddad vy — kan inte ändras via denna länk</span>
+  </div>
+  <div id="innehall"></div>
+  <div class="footer">
+    <div>Vänskapsförbundet Sverige-Israel · administration@sverigeisrael.se</div>
+    <div class="uppdaterad" id="uppdaterad"></div>
+  </div>
+</div>
+
+<script>
+const SEKTIONER = [
+  { id: 'ordförande',       label: 'Ordförande' },
+  { id: 'vice ordförande',  label: 'Vice ordförande' },
+  { id: 'kassör',           label: 'Kassör' },
+  { id: 'sekreterare',      label: 'Sekreterare' },
+  { id: 'ledamot',          label: 'Styrelseledamöter' },
+  { id: 'ersättare',        label: 'Ersättare' },
+  { id: 'revisor',          label: 'Revisorer' },
+  { id: 'valberedning',     label: 'Valberedning' },
+  { id: 'kongressombud',    label: 'Kongressombud' },
+  { id: 'kongressersättare',label: 'Kongressersättare' },
+];
+
+let data = {};
+try {
+  const raw = new URLSearchParams(window.location.hash.slice(1)).get('d');
+  if (raw) {
+    const isCompressed = raw.startsWith('z');
+    const b64 = (isCompressed ? raw.slice(1) : raw).replace(/-/g,'+').replace(/_/g,'/');
+    const pad = b64 + '=='.slice(0,(4-b64.length%4)%4);
+    if (isCompressed) {
+      const bytes = Uint8Array.from(atob(pad), c => c.charCodeAt(0));
+      data = JSON.parse(pako.inflate(bytes, { to: 'string' }));
+    } else {
+      data = JSON.parse(decodeURIComponent(escape(atob(pad))));
+    }
+  }
+} catch(e) {}
+
+const forening = data.forening || 'Föreningen';
+const styrelse = data.styrelse || [];
+const uppdaterad = data.uppdaterad || '';
+
+document.getElementById('rubrik').textContent = forening + ' — Funktionärsregister';
+if (uppdaterad) {
+  document.getElementById('uppdaterad').textContent = 'Senast uppdaterad: ' + uppdaterad;
+}
+
+const innehall = document.getElementById('innehall');
+
+// Gruppera per roll
+SEKTIONER.forEach(sek => {
+  const poster = styrelse.filter(p => p.roll === sek.id);
+  if (!poster.length) return;
+  const div = document.createElement('div');
+  div.className = 'sektion';
+  div.innerHTML = '<div class="sektion-rubrik">' + sek.label + '</div>'
+    + poster.map(p => {
+        const init = ((p.fn||'')[0]||'') + ((p.en||'')[0]||'');
+        return '<div class="person-rad">'
+          + '<div class="avatar">' + init.toUpperCase() + '</div>'
+          + '<div><div class="person-namn">' + (p.fn||'') + ' ' + (p.en||'') + '</div>'
+          + '</div></div>';
+      }).join('');
+  innehall.appendChild(div);
+});
+
+if (!styrelse.length) {
+  innehall.innerHTML = '<div class="sektion"><p class="tom">Inga uppgifter registrerade.</p></div>';
+}
+</script>
+</body>
+</html>
