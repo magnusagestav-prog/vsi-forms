@@ -444,7 +444,7 @@ async function skickaIn() {
     document.getElementById('bekraftelse').style.display = 'block';
   } catch(e) {
     const felBox = document.getElementById('fel-box');
-    felBox.textContent = 'Kunde inte skicka. Försök igen eller kontakta administratören. (' + (e.text||e.message||e) + ')';
+    felBox.textContent = 'Tekniskt fel — prova igen om 15 minuter. Om det fortfarande inte fungerar, kontakta Magnus på administration@sverigeisrael.se';
     felBox.style.display = 'block';
     knapp.disabled = false;
     knapp.textContent = 'Skicka in styrelselistan';
