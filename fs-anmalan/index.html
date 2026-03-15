@@ -356,7 +356,7 @@ Notering: ${get('notering')}`;
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email:   ADMIN_EMAIL,
       from_name:  pNamn || 'Förbundsstyrelseledamot',
-      subject:    `[VSI-FS-ANM] ${pNamn} – Kongressanmälan förbundsstyrelse`,
+      subject:    `[VSI-FS-ANM:${pId}] ${pNamn} – Kongressanmälan förbundsstyrelse`,
       message:    body,
     });
     document.getElementById('anm-form').style.display = 'none';
