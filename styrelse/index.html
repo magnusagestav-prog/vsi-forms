@@ -444,10 +444,18 @@ async function skickaIn() {
     document.getElementById('bekraftelse').style.display = 'block';
   } catch(e) {
     const felBox = document.getElementById('fel-box');
-    felBox.textContent = 'Tekniskt fel — prova igen om 15 minuter. Om det fortfarande inte fungerar, kontakta Magnus på administration@sverigeisrael.se';
+    // Räkna försök för automatisk retry-info
+    const försök = (window._skickaFörsök = (window._skickaFörsök || 0) + 1);
+    if (försök === 1) {
+      felBox.innerHTML = '⚠ Det gick inte att skicka just nu.<br>Vänta en stund och försök igen med knappen nedan.';
+    } else {
+      felBox.innerHTML = '⚠ Fortfarande fel efter ' + försök + ' försök.<br>'
+        + 'Kontakta oss på <a href="mailto:administration@sverigeisrael.se">administration@sverigeisrael.se</a> '
+        + 'och beskriv er förening — vi löser det manuellt.';
+    }
     felBox.style.display = 'block';
     knapp.disabled = false;
-    knapp.textContent = 'Skicka in styrelselistan';
+    knapp.textContent = försök === 1 ? '↺ Försök igen' : 'Skicka in styrelselistan';
   }
 }
 
