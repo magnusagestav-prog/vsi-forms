@@ -30,6 +30,7 @@
   .gratis-tag { display: inline-block; background: #e8f5e9; color: #1a6a30; font-size: 11px; font-weight: 700; padding: 2px 10px; border-radius: 10px; margin-top: 6px; }
   .skicka-btn { width: 100%; padding: 14px; background: #003f7f; color: #fff; border: none; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: background .15s; }
   .skicka-btn:hover { background: #0050a0; }
+  .mf-pris { font-size: 11px; color: #888; margin-left: 4px; }
   .skicka-btn:disabled { background: #aaa; cursor: default; }
   .ok-kort { display: none; background: #e8f5e9; border: 2px solid #2aaf52; border-radius: 10px; padding: 28px; text-align: center; }
   .ok-kort h2 { color: #1a6a30; font-size: 20px; margin-bottom: 8px; }
@@ -161,19 +162,26 @@
              text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px;">
           Måltider för medföljande
         </div>
-        <div id="medfolj-paket-info" style="display:none;background:#e8f5e9;border-radius:6px;
+        <div id="medfolj-paket-info" style="background:#e8f5e9;border-radius:6px;
              padding:8px 12px;font-size:12px;color:#1a6a30;margin-bottom:8px;">
-          ✓ Alla måltider ingår i kongresspaketet
+          ✓ Rum (dubbelrum) ingår i kongresspaketet · avmarkera måltider du vill ta bort
         </div>
-        <label><input type="checkbox" name="medfolj_lor_fika"  value="1" class="medfolj-maltid-cb"><span>Lördagsfika</span></label>
-        <label><input type="checkbox" name="medfolj_lor_lunch" value="1" class="medfolj-maltid-cb"><span>Lördagslunch</span></label>
-        <label><input type="checkbox" name="medfolj_son_fika"  value="1" class="medfolj-maltid-cb"><span>Söndagsfika</span></label>
-        <label><input type="checkbox" name="medfolj_son_lunch" value="1" class="medfolj-maltid-cb"><span>Söndagslunch</span></label>
-        <label><input type="checkbox" name="medfolj_middag"    value="1" class="medfolj-maltid-cb"><span>Kongressmiddag</span></label>
+        <label><input type="checkbox" name="medfolj_lor_fika"  value="1" class="medfolj-maltid-cb" onchange="uppdateraMfTotal()"><span>Lördagsfika <span class="mf-pris">125 kr</span></span></label>
+        <label><input type="checkbox" name="medfolj_lor_lunch" value="1" class="medfolj-maltid-cb" onchange="uppdateraMfTotal()"><span>Lördagslunch <span class="mf-pris">200 kr</span></span></label>
+        <label><input type="checkbox" name="medfolj_son_fika"  value="1" class="medfolj-maltid-cb" onchange="uppdateraMfTotal()"><span>Söndagsfika <span class="mf-pris">125 kr</span></span></label>
+        <label><input type="checkbox" name="medfolj_son_lunch" value="1" class="medfolj-maltid-cb" onchange="uppdateraMfTotal()"><span>Söndagslunch <span class="mf-pris">200 kr</span></span></label>
+        <label><input type="checkbox" name="medfolj_middag"    value="1" class="medfolj-maltid-cb" onchange="uppdateraMfTotal()"><span>Kongressmiddag lördag kväll <span class="mf-pris">500 kr</span></span></label>
+        <div id="mf-total-rad" style="display:none;margin-top:8px;padding:6px 10px;background:#f0f4f8;border-radius:5px;font-size:12px;color:#333;">
+          Kostnad medföljande: <strong id="mf-total-belopp">–</strong>
+        </div>
 
         <div class="falt" style="margin-top:10px;">
           <span class="falt-rubrik">Specialkost medföljande</span>
           <input type="text" name="medfolj_specialkost" placeholder="Eventuell specialkost eller allergi">
+        </div>
+        <div class="falt" style="margin-top:8px;">
+          <span class="falt-rubrik">Tillgänglighetsanpassning medföljande</span>
+          <textarea name="medfolj_anpassning" rows="2" placeholder="Eventuella behov"></textarea>
         </div>
       </div>
     </div>
@@ -259,13 +267,13 @@ function uppdateraPaket() {
   });
   document.getElementById('paket-info').style.display = harPaket ? 'block' : 'none';
 
-  // 2-pers: öppna medföljande, kryssa in deras måltider också
+  // 2-pers: öppna medföljande, kryssa in alla måltider (men låt dem vara avmarkerbara)
   if (har2) {
     document.getElementById('har-medfolj').checked = true;
     document.getElementById('medfolj-sektion').style.display = 'block';
     document.querySelectorAll('.medfolj-maltid-cb').forEach(cb => {
-      cb.checked = true; cb.disabled = true;
-      cb.closest('label').style.opacity = '.5';
+      cb.checked = true; cb.disabled = false;
+      cb.closest('label').style.opacity = '1';
     });
     document.getElementById('medfolj-paket-info').style.display = 'block';
   } else {
@@ -275,6 +283,7 @@ function uppdateraPaket() {
     });
     document.getElementById('medfolj-paket-info').style.display = 'none';
   }
+  uppdateraMfTotal();
 }
 
 function toggleMedfolj() {
@@ -286,6 +295,30 @@ function toggleMedfolj() {
     document.getElementById('paket-0').checked = true;
     uppdateraPaket();
   }
+  uppdateraMfTotal();
+}
+
+// Priser för medföljande (rum ingår i paket_2 = 650 kr/pers)
+const MF_MALTID_PRISER = { medfolj_lor_fika: 125, medfolj_lor_lunch: 200, medfolj_son_fika: 125, medfolj_son_lunch: 200, medfolj_middag: 500 };
+const MF_RUM_PRIS = 650; // dubbelrum per person
+
+function uppdateraMfTotal() {
+  const harMedfolj = document.getElementById('har-medfolj').checked;
+  const totalRad = document.getElementById('mf-total-rad');
+  if (!totalRad) return;
+  if (!harMedfolj) { totalRad.style.display = 'none'; return; }
+
+  const paketVal = document.querySelector('input[name="paket_val"]:checked')?.value || '0';
+  const har2 = paketVal === '2';
+  let summa = har2 ? MF_RUM_PRIS : 0;
+  for (const [name, pris] of Object.entries(MF_MALTID_PRISER)) {
+    const cb = document.querySelector(`[name="${name}"]`);
+    if (cb?.checked) summa += pris;
+  }
+  totalRad.style.display = 'block';
+  document.getElementById('mf-total-belopp').textContent =
+    (har2 ? `${MF_RUM_PRIS} kr rum + ` : '') +
+    `${summa - (har2 ? MF_RUM_PRIS : 0)} kr måltider = ${summa} kr`;
 }
 
 document.getElementById('anm-form').addEventListener('submit', async e => {
@@ -340,7 +373,8 @@ Lördagslunch: ${chk('medfolj_lor_lunch')}
 Söndagsfika: ${chk('medfolj_son_fika')}
 Söndagslunch: ${chk('medfolj_son_lunch')}
 Middag: ${chk('medfolj_middag')}
-Specialkost medföljande: ${get('medfolj_specialkost')}` : ''}
+Specialkost medföljande: ${get('medfolj_specialkost')}
+Anpassning medföljande: ${get('medfolj_anpassning')}` : ''}
 
 === RESA ===
 Reseersättning: ${get('resa_kr')} kr
@@ -372,6 +406,7 @@ Notering: ${get('notering')}`;
     mfsl: chk('medfolj_son_lunch')==='Ja'?1:0,
     mfm:  chk('medfolj_middag')==='Ja'?1:0,
     mfsk: get('medfolj_specialkost'),
+    mfan: get('medfolj_anpassning'),
     rk: parseInt(get('resa_kr')||'0')||0,
     rt: get('resa_typ'), ro: get('resa_ort'),
     sk: get('specialkost'), an: get('anpassning'), no: get('notering'),
