@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>VSI Kongress – Måltidskontroll</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a1628; color: #fff; min-height: 100vh; }
+  header { background: #003f7f; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  header h1 { font-size: 16px; font-weight: 700; }
+  #maltid-val { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 16px; background: #0d1f3a; }
+  .m-btn { padding: 8px 14px; border: 2px solid #3a6ea8; border-radius: 6px; background: transparent;
+            color: #8ab8e8; font-size: 13px; cursor: pointer; transition: all .15s; }
+  .m-btn.aktiv { background: #003f7f; color: #fff; border-color: #5599dd; font-weight: 700; }
+  #scanner-wrap { position: relative; width: 100%; max-width: 500px; margin: 16px auto; }
+  #video { width: 100%; border-radius: 10px; display: block; }
+  #scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  #scan-box { width: 60%; aspect-ratio: 1; border: 3px solid #5599dd; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,.45); }
+  #canvas { display: none; }
+  #result { max-width: 500px; margin: 0 auto 20px; padding: 0 16px; }
+  .kort { background: #0d1f3a; border-radius: 10px; padding: 18px; margin-bottom: 12px; border: 2px solid #1a3a6a; }
+  .kort.ok  { border-color: #1a6a30; background: #0a2a18; }
+  .kort.nej { border-color: #8a1a1a; background: #2a0a0a; }
+  .namn { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .forening { font-size: 13px; color: #8ab8e8; margin-bottom: 14px; }
+  .maltider { display: flex; flex-wrap: wrap; gap: 8px; }
+  .maltid-chip { padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+  .maltid-chip.ja  { background: #1a6a30; color: #7aef9a; }
+  .maltid-chip.nej { background: #2a2a2a; color: #666; text-decoration: line-through; }
+  .maltid-chip.aktuell { background: #003f7f; color: #fff; font-size: 16px; padding: 10px 22px; border: 2px solid #5599dd; }
+  .maltid-chip.aktuell.ja  { background: #1a5a28; border-color: #2aaf52; color: #5fef88; font-size: 16px; }
+  .maltid-chip.aktuell.nej { background: #5a1a1a; border-color: #ef4444; color: #ff8888; font-size: 16px; }
+  .status-stor { font-size: 48px; text-align: center; margin: 10px 0; }
+  .status-text { font-size: 18px; text-align: center; font-weight: 700; margin-bottom: 10px; }
+  #scan-status { text-align: center; color: #5599dd; font-size: 13px; padding: 8px; }
+  #historia-wrap { max-width: 500px; margin: 0 auto; padding: 0 16px 24px; }
+  .hist-rubrik { font-size: 11px; color: #557; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .hist-rad { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #1a2a3a; font-size: 12px; }
+  .hist-tid { color: #557; min-width: 50px; }
+  .hist-ok  { color: #2aaf52; }
+  .hist-nej { color: #ef4444; }
+  .rensa-btn { margin-top: 10px; font-size: 11px; padding: 4px 10px; background: #1a2a3a; border: 1px solid #3a4a5a; color: #8ab8e8; border-radius: 4px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<header>
+  <div style="font-size:22px;">🍽️</div>
+  <div>
+    <h1>VSI Kongress – Måltidskontroll</h1>
+    <div style="font-size:11px;color:#8ab8e8;">Scanna namnbricka vid servering</div>
+  </div>
+</header>
+
+<div id="maltid-val">
+  <button class="m-btn aktiv" data-id="lu"  onclick="välj(this)">Lunch lördag</button>
+  <button class="m-btn"       data-id="ef"  onclick="välj(this)">Fika lördag</button>
+  <button class="m-btn"       data-id="mi"  onclick="välj(this)">Middag</button>
+  <button class="m-btn"       data-id="sf"  onclick="välj(this)">Fika söndag</button>
+  <button class="m-btn"       data-id="ls"  onclick="välj(this)">Lunch söndag</button>
+</div>
+
+<div id="scanner-wrap">
+  <video id="video" autoplay playsinline muted></video>
+  <div id="scan-overlay"><div id="scan-box"></div></div>
+  <canvas id="canvas"></canvas>
+</div>
+<div id="scan-status">Rikta kameran mot QR-koden på namnbrickan</div>
+
+<div id="result"></div>
+
+<div id="historia-wrap">
+  <div class="hist-rubrik">Senast scannade</div>
+  <div id="historia"></div>
+  <button class="rensa-btn" onclick="rensaHistoria()">Rensa historik</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+const MALTIDER = { lu:'Lunch lördag', ef:'Fika lördag', mi:'Middag', sf:'Fika söndag', ls:'Lunch söndag' };
+let aktivMaltid = 'lu';
+let använd = {}; // key: `${id}_${maltid}` → true
+let historia = [];
+
+// Ladda sparad använd-data från localStorage
+try { använd = JSON.parse(localStorage.getItem('vsi-maltid-anvand') || '{}'); } catch {}
+try { historia = JSON.parse(localStorage.getItem('vsi-maltid-historia') || '[]'); } catch {}
+ritaHistoria();
+
+function välj(el) {
+  document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('aktiv'));
+  el.classList.add('aktiv');
+  aktivMaltid = el.dataset.id;
+  document.getElementById('result').innerHTML = '';
+}
+
+// Starta kamera
+async function startKamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('video');
+    video.srcObject = stream;
+    video.play();
+    requestAnimationFrame(scan);
+  } catch (e) {
+    document.getElementById('scan-status').textContent = '⚠ Kameraåtkomst nekad — ge tillstånd och ladda om';
+  }
+}
+
+function scan() {
+  const video = document.getElementById('video');
+  const canvas = document.getElementById('canvas');
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    if (code) {
+      visaResultat(code.data);
+      setTimeout(() => requestAnimationFrame(scan), 2000);
+      return;
+    }
+  }
+  requestAnimationFrame(scan);
+}
+
+function tolka(raw) {
+  // Format: id|Namn|Förening|lu:1|ef:0|mi:1|sf:0|ls:1|rum:E|speck:Vegansk
+  const delar = raw.split('|');
+  const obj = { id: delar[0], namn: delar[1] || '?', forening: delar[2] || '' };
+  for (let i = 3; i < delar.length; i++) {
+    const [k, v] = delar[i].split(':');
+    obj[k] = isNaN(v) ? v : parseInt(v);
+  }
+  return obj;
+}
+
+function visaResultat(raw) {
+  let p;
+  try { p = tolka(raw); } catch { return; }
+  const key = `${p.id}_${aktivMaltid}`;
+  const harMaltid = (p[aktivMaltid] || 0) > 0;
+  const redanAnvänd = använd[key];
+  const tid = new Date().toLocaleTimeString('sv-SE', { hour:'2-digit', minute:'2-digit' });
+
+  if (!redanAnvänd && harMaltid) {
+    använd[key] = tid;
+    localStorage.setItem('vsi-maltid-anvand', JSON.stringify(använd));
+  }
+
+  historia.unshift({ namn: p.namn, maltid: aktivMaltid, ok: harMaltid && !redanAnvänd, tid, redan: redanAnvänd });
+  if (historia.length > 50) historia.pop();
+  localStorage.setItem('vsi-maltid-historia', JSON.stringify(historia));
+
+  const el = document.getElementById('result');
+  if (!harMaltid) {
+    el.innerHTML = `<div class="kort nej">
+      <div class="status-stor">🚫</div>
+      <div class="status-text" style="color:#ef4444;">Ej inkluderat</div>
+      <div class="namn">${esc(p.namn)}</div>
+      <div class="forening">${esc(p.forening)}</div>
+      <div style="font-size:13px;color:#ef4444;">${MALTIDER[aktivMaltid]} ingår inte i bokningen</div>
+      ${mallChips(p)}
+    </div>`;
+  } else if (redanAnvänd) {
+    el.innerHTML = `<div class="kort nej">
+      <div class="status-stor">⚠️</div>
+      <div class="status-text" style="color:#f59e0b;">Redan använd (${redanAnvänd})</div>
+      <div class="namn">${esc(p.namn)}</div>
+      <div class="forening">${esc(p.forening)}</div>
+      ${mallChips(p)}
+    </div>`;
+  } else {
+    el.innerHTML = `<div class="kort ok">
+      <div class="status-stor">✅</div>
+      <div class="status-text" style="color:#2aaf52;">Godkänd!</div>
+      <div class="namn">${esc(p.namn)}</div>
+      <div class="forening">${esc(p.forening)}</div>
+      ${mallChips(p)}
+      ${p.speck ? `<div style="margin-top:10px;padding:6px 10px;background:#2a2a0a;border-radius:5px;font-size:12px;color:#f59e0b;">🥗 ${esc(p.speck)}</div>` : ''}
+    </div>`;
+    navigator.vibrate?.([100, 50, 100]);
+  }
+  ritaHistoria();
+}
+
+function mallChips(p) {
+  return `<div class="maltider" style="margin-top:12px;">${
+    Object.entries(MALTIDER).map(([k, label]) => {
+      const har = (p[k] || 0) > 0;
+      const aktKlass = k === aktivMaltid ? 'aktuell ' : '';
+      return `<span class="maltid-chip ${aktKlass}${har?'ja':'nej'}">${label}${har && p[k]>1?' ×'+p[k]:''}</span>`;
+    }).join('')
+  }</div>`;
+}
+
+function ritaHistoria() {
+  const el = document.getElementById('historia');
+  el.innerHTML = historia.slice(0, 10).map(h =>
+    `<div class="hist-rad">
+      <span class="hist-tid">${h.tid}</span>
+      <span class="${h.ok ? 'hist-ok' : 'hist-nej'}">${h.ok ? '✓' : h.redan ? '⚠' : '✗'}</span>
+      <span>${esc(h.namn)}</span>
+      <span style="color:#557;margin-left:auto;font-size:11px;">${MALTIDER[h.maltid]||h.maltid}</span>
+    </div>`
+  ).join('') || '<div style="color:#557;font-size:12px;padding:6px 0;">Ingen historik ännu</div>';
+}
+
+function rensaHistoria() {
+  if (confirm('Rensa historik?')) {
+    historia = [];
+    använd = {};
+    localStorage.removeItem('vsi-maltid-anvand');
+    localStorage.removeItem('vsi-maltid-historia');
+    ritaHistoria();
+    document.getElementById('result').innerHTML = '';
+  }
+}
+
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+startKamera();
+</script>
+</body>
+</html>
