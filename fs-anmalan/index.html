@@ -352,11 +352,37 @@ Specialkost: ${get('specialkost')}
 Anpassning: ${get('anpassning')}
 Notering: ${get('notering')}`;
 
+  // Enkoda all formulärdata i ämnesraden (fallback när EmailJS-mall ej skickar body)
+  const _fsData = {
+    p: paketVal,
+    e: chk('enkelrum_extra')==='Ja'?1:0,
+    d: chk('dubbelrum_extra')==='Ja'?1:0,
+    lf: chk('lor_fika')==='Ja'?1:0,
+    ll: chk('lor_lunch')==='Ja'?1:0,
+    sf: chk('son_fika')==='Ja'?1:0,
+    sl: chk('son_lunch')==='Ja'?1:0,
+    m:  chk('middag')==='Ja'?1:0,
+    mf: medfolj?1:0,
+    mffn: medfoljFn, mfen: medfoljEn,
+    mfid: get('medfolj_myclub_id'), mfpnr: get('medfolj_pnr'),
+    mfrol: get('medfolj_roll'),
+    mflf: chk('medfolj_lor_fika')==='Ja'?1:0,
+    mfll: chk('medfolj_lor_lunch')==='Ja'?1:0,
+    mfsf: chk('medfolj_son_fika')==='Ja'?1:0,
+    mfsl: chk('medfolj_son_lunch')==='Ja'?1:0,
+    mfm:  chk('medfolj_middag')==='Ja'?1:0,
+    mfsk: get('medfolj_specialkost'),
+    rk: parseInt(get('resa_kr')||'0')||0,
+    rt: get('resa_typ'), ro: get('resa_ort'),
+    sk: get('specialkost'), an: get('anpassning'), no: get('notering'),
+  };
+  const _fsEnc = btoa(unescape(encodeURIComponent(JSON.stringify(_fsData))));
+
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email:   ADMIN_EMAIL,
       from_name:  pNamn || 'Förbundsstyrelseledamot',
-      subject:    `[VSI-FS-ANM:${pId}] ${pNamn} – Kongressanmälan förbundsstyrelse`,
+      subject:    `[VSI-FS-ANM:${pId}:${_fsEnc}] ${pNamn} – Kongressanmälan förbundsstyrelse`,
       message:    body,
     });
     document.getElementById('anm-form').style.display = 'none';
