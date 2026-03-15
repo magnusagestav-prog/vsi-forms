@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VSI Kongress 2026 – Förbundsstyrelseledamot anmälan</title>
+<title>VSI Kongress 2026 – Kongressombud anmälan</title>
 <script src="../config.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -124,7 +124,7 @@
       <div id="medfolj-sektion" style="display:none;margin-top:12px;border-top:1px solid #e8eef5;padding-top:12px;">
 
         <div style="background:#fff3e0;border-radius:6px;padding:10px 12px;font-size:12px;color:#5a3000;margin-bottom:12px;">
-          Om medföljande är <strong>FS-ledamot eller kongressombud</strong> behöver den inte fylla i
+          Om medföljande är <strong>FS-ledamot eller ett annat kongressombud</strong> behöver den inte fylla i
           ett eget formulär — ange uppgifter nedan så registreras personen automatiskt.
         </div>
 
@@ -236,7 +236,7 @@ emailjs.init(EMAILJS_PUBLIC_KEY);
 // Läs URL-params
 const P = new URLSearchParams(location.search);
 const pNamn    = P.get('n')  || '';
-const pRoll    = P.get('r')  || 'Styrelseledamot';
+const pRoll    = P.get('r')  || 'Kongressombud';
 const pEmail   = P.get('e')  || '';
 const pForening= P.get('f')  || '';
 const pId      = P.get('id') || '';
@@ -332,7 +332,7 @@ document.getElementById('anm-form').addEventListener('submit', async e => {
   const medfoljEn = get('medfolj_en');
   const medfoljNamn = [medfoljFn, medfoljEn].filter(Boolean).join(' ');
 
-  const body = `[VSI-FS-ANM]
+  const body = `[VSI-OMBUD-ANM]
 Namn: ${pNamn}
 Roll: ${pRoll}
 Förening: ${pForening}
@@ -408,8 +408,8 @@ Notering: ${get('notering')}`;
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
       to_email:   ADMIN_EMAIL,
-      from_name:  pNamn || 'Förbundsstyrelseledamot',
-      subject:    `[VSI-FS-ANM:${pId}:${_fsEnc}] ${pNamn} – Kongressanmälan förbundsstyrelse`,
+      from_name:  pNamn || 'Kongressombud',
+      subject:    `[VSI-OMBUD-ANM:${pId}:${_fsEnc}] ${pNamn} – Kongressanmälan ombud`,
       message:    body,
     });
     document.getElementById('anm-form').style.display = 'none';
