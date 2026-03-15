@@ -61,16 +61,33 @@
   <form id="anm-form">
     <!-- LOGI -->
     <div class="kort">
-      <div class="sek-rubrik">Logi &amp; kongresspaket</div>
+      <div class="sek-rubrik">Kongresspaket</div>
       <label>
-        <input type="checkbox" name="kongresspaket" value="1">
-        <span>Kongresspaket lördag–söndag
-          <span class="opt-detalj">Inkl. logi lö–sö, frukost, seminarier. Pris: 0 kr (förbundsstyrelse)</span>
+        <input type="radio" name="paket_val" value="1" id="paket-1" onchange="uppdateraPaket()">
+        <span>Kongresspaket – 1 person
+          <span class="opt-detalj">Inkl. logi lö–sö, frukost, alla måltider lö–sö, seminarier. Pris: 0 kr.</span>
         </span>
       </label>
       <label>
+        <input type="radio" name="paket_val" value="2" id="paket-2" onchange="uppdateraPaket()">
+        <span>Kongresspaket – 2 personer (inkl. medföljande)
+          <span class="opt-detalj">Samma som ovan men för dig + en till. Du behöver ange uppgifter nedan.</span>
+        </span>
+      </label>
+      <label>
+        <input type="radio" name="paket_val" value="0" id="paket-0" onchange="uppdateraPaket()" checked>
+        <span>Inget kongresspaket
+          <span class="opt-detalj">Välj enskilda måltider och logi nedan.</span>
+        </span>
+      </label>
+    </div>
+
+    <!-- EXTRANATT -->
+    <div class="kort">
+      <div class="sek-rubrik">Extra natt fredag–lördag</div>
+      <label>
         <input type="checkbox" name="enkelrum_extra" value="1">
-        <span>Enkelrum fredag–lördag (extra natt)
+        <span>Enkelrum fredag–lördag
           <span class="opt-detalj">Anländer redan fredag kväll</span>
         </span>
       </label>
@@ -82,36 +99,78 @@
       </label>
     </div>
 
-    <!-- MÅLTIDER -->
-    <div class="kort">
-      <div class="sek-rubrik">Måltider (utöver kongresspaketet)</div>
-      <label><input type="checkbox" name="lor_fika" value="1"><span>Lördagsfika</span></label>
-      <label><input type="checkbox" name="lor_lunch" value="1"><span>Lördagslunch</span></label>
-      <label><input type="checkbox" name="son_fika" value="1"><span>Söndagsfika</span></label>
-      <label><input type="checkbox" name="son_lunch" value="1"><span>Söndagslunch</span></label>
-      <label><input type="checkbox" name="middag" value="1">
-        <span>Kongressmiddag lördag kväll</span>
-      </label>
+    <!-- MÅLTIDER (visas grå om paket valt) -->
+    <div class="kort" id="maltid-kort">
+      <div class="sek-rubrik">Måltider</div>
+      <div id="paket-info" style="display:none;background:#e8f5e9;border-radius:6px;padding:8px 12px;
+           font-size:12px;color:#1a6a30;margin-bottom:10px;">
+        ✓ Alla måltider ingår i kongresspaketet
+      </div>
+      <label><input type="checkbox" name="lor_fika"  value="1" class="maltid-cb"><span>Lördagsfika</span></label>
+      <label><input type="checkbox" name="lor_lunch" value="1" class="maltid-cb"><span>Lördagslunch</span></label>
+      <label><input type="checkbox" name="son_fika"  value="1" class="maltid-cb"><span>Söndagsfika</span></label>
+      <label><input type="checkbox" name="son_lunch" value="1" class="maltid-cb"><span>Söndagslunch</span></label>
+      <label><input type="checkbox" name="middag"    value="1" class="maltid-cb"><span>Kongressmiddag lördag kväll</span></label>
     </div>
 
-    <!-- MEDFÖLJER -->
+    <!-- MEDFÖLJANDE (visas vid paket 2 eller manuell kryssning) -->
     <div class="kort">
       <div class="sek-rubrik">Medföljande</div>
       <label>
         <input type="checkbox" name="har_medfolj" id="har-medfolj" value="1" onchange="toggleMedfolj()">
-        <span>Jag tar med en medföljande (partner/sällskap)</span>
+        <span>Jag tar med en medföljande</span>
       </label>
       <div id="medfolj-sektion" style="display:none;margin-top:12px;border-top:1px solid #e8eef5;padding-top:12px;">
-        <div class="falt">
-          <span class="falt-rubrik">Namn på medföljande (frivilligt)</span>
-          <input type="text" name="medfolj_namn" placeholder="Förnamn Efternamn">
+
+        <div style="background:#fff3e0;border-radius:6px;padding:10px 12px;font-size:12px;color:#5a3000;margin-bottom:12px;">
+          Om medföljande är <strong>FS-ledamot eller kongressombud</strong> behöver den inte fylla i
+          ett eget formulär — ange uppgifter nedan så registreras personen automatiskt.
         </div>
-        <div class="sek-rubrik" style="margin-top:12px;">Måltider för medföljande</div>
-        <label><input type="checkbox" name="medfolj_lor_fika" value="1"><span>Lördagsfika</span></label>
-        <label><input type="checkbox" name="medfolj_lor_lunch" value="1"><span>Lördagslunch</span></label>
-        <label><input type="checkbox" name="medfolj_son_fika" value="1"><span>Söndagsfika</span></label>
-        <label><input type="checkbox" name="medfolj_son_lunch" value="1"><span>Söndagslunch</span></label>
-        <label><input type="checkbox" name="medfolj_middag" value="1"><span>Kongressmiddag</span></label>
+
+        <div class="två-kol">
+          <div class="falt">
+            <span class="falt-rubrik">Förnamn</span>
+            <input type="text" name="medfolj_fn" placeholder="Förnamn">
+          </div>
+          <div class="falt">
+            <span class="falt-rubrik">Efternamn</span>
+            <input type="text" name="medfolj_en" placeholder="Efternamn">
+          </div>
+        </div>
+        <div class="två-kol">
+          <div class="falt">
+            <span class="falt-rubrik">MedlemsID (MyClub)</span>
+            <input type="text" name="medfolj_myclub_id" placeholder="t.ex. 12345">
+          </div>
+          <div class="falt">
+            <span class="falt-rubrik">Personnummer (YYYYMMDD)</span>
+            <input type="text" name="medfolj_pnr" placeholder="YYYYMMDD">
+          </div>
+        </div>
+        <div class="falt">
+          <span class="falt-rubrik">Roll / kategori</span>
+          <select name="medfolj_roll">
+            <option value="">– Välj –</option>
+            <option value="fs_ledamot">Förbundsstyrelseledamot</option>
+            <option value="kongressombud">Kongressombud</option>
+            <option value="ovrig">Övrig deltagare (betalar ordinarie pris)</option>
+          </select>
+        </div>
+
+        <div id="medfolj-maltid-rubrik" style="font-size:11px;font-weight:700;color:#557;
+             text-transform:uppercase;letter-spacing:.06em;margin:10px 0 6px;">
+          Måltider för medföljande
+        </div>
+        <div id="medfolj-paket-info" style="display:none;background:#e8f5e9;border-radius:6px;
+             padding:8px 12px;font-size:12px;color:#1a6a30;margin-bottom:8px;">
+          ✓ Alla måltider ingår i kongresspaketet
+        </div>
+        <label><input type="checkbox" name="medfolj_lor_fika"  value="1" class="medfolj-maltid-cb"><span>Lördagsfika</span></label>
+        <label><input type="checkbox" name="medfolj_lor_lunch" value="1" class="medfolj-maltid-cb"><span>Lördagslunch</span></label>
+        <label><input type="checkbox" name="medfolj_son_fika"  value="1" class="medfolj-maltid-cb"><span>Söndagsfika</span></label>
+        <label><input type="checkbox" name="medfolj_son_lunch" value="1" class="medfolj-maltid-cb"><span>Söndagslunch</span></label>
+        <label><input type="checkbox" name="medfolj_middag"    value="1" class="medfolj-maltid-cb"><span>Kongressmiddag</span></label>
+
         <div class="falt" style="margin-top:10px;">
           <span class="falt-rubrik">Specialkost medföljande</span>
           <input type="text" name="medfolj_specialkost" placeholder="Eventuell specialkost eller allergi">
@@ -187,9 +246,46 @@ const pId      = P.get('id') || '';
 document.getElementById('vis-namn').textContent = pNamn || 'Okänd person';
 document.getElementById('vis-roll').textContent = [pRoll, pForening].filter(Boolean).join(' · ');
 
+function uppdateraPaket() {
+  const val = document.querySelector('input[name="paket_val"]:checked')?.value || '0';
+  const harPaket = val !== '0';
+  const har2 = val === '2';
+
+  // Måltider: kryssa i och inaktivera om paket valt
+  document.querySelectorAll('.maltid-cb').forEach(cb => {
+    cb.checked   = harPaket;
+    cb.disabled  = harPaket;
+    cb.closest('label').style.opacity = harPaket ? '.5' : '1';
+  });
+  document.getElementById('paket-info').style.display = harPaket ? 'block' : 'none';
+
+  // 2-pers: öppna medföljande, kryssa in deras måltider också
+  if (har2) {
+    document.getElementById('har-medfolj').checked = true;
+    document.getElementById('medfolj-sektion').style.display = 'block';
+    document.querySelectorAll('.medfolj-maltid-cb').forEach(cb => {
+      cb.checked = true; cb.disabled = true;
+      cb.closest('label').style.opacity = '.5';
+    });
+    document.getElementById('medfolj-paket-info').style.display = 'block';
+  } else {
+    document.querySelectorAll('.medfolj-maltid-cb').forEach(cb => {
+      cb.disabled = false;
+      cb.closest('label').style.opacity = '1';
+    });
+    document.getElementById('medfolj-paket-info').style.display = 'none';
+  }
+}
+
 function toggleMedfolj() {
   const vis = document.getElementById('har-medfolj').checked;
   document.getElementById('medfolj-sektion').style.display = vis ? 'block' : 'none';
+  // Om paket 2 är valt, avmarkera det om medföljande avmarkeras
+  if (!vis) {
+    document.getElementById('paket-2').checked = false;
+    document.getElementById('paket-0').checked = true;
+    uppdateraPaket();
+  }
 }
 
 document.getElementById('anm-form').addEventListener('submit', async e => {
@@ -200,9 +296,18 @@ document.getElementById('anm-form').addEventListener('submit', async e => {
 
   const fd = new FormData(e.target);
   const get = k => fd.get(k) || '';
-  const chk = k => fd.get(k) === '1' ? 'Ja' : 'Nej';
+  const chk = k => {
+    // Kolla både FormData och faktisk checkbox-state (inaktiverade checkar skickas ej)
+    const el = e.target.querySelector(`[name="${k}"]`);
+    return (el?.checked || fd.get(k) === '1') ? 'Ja' : 'Nej';
+  };
 
-  const medfolj = get('har_medfolj') === '1';
+  const paketVal  = document.querySelector('input[name="paket_val"]:checked')?.value || '0';
+  const harPaket  = paketVal !== '0';
+  const medfolj   = document.getElementById('har-medfolj').checked;
+  const medfoljFn = get('medfolj_fn');
+  const medfoljEn = get('medfolj_en');
+  const medfoljNamn = [medfoljFn, medfoljEn].filter(Boolean).join(' ');
 
   const body = `[VSI-FS-ANM]
 Namn: ${pNamn}
@@ -211,12 +316,12 @@ Förening: ${pForening}
 E-post: ${pEmail}
 ID: ${pId}
 
-=== LOGI ===
-Kongresspaket lö-sö: ${chk('kongresspaket')}
+=== PAKET ===
+Kongresspaket: ${paketVal === '2' ? '2 personer' : paketVal === '1' ? '1 person' : 'Inget'}
 Enkelrum fre-lö: ${chk('enkelrum_extra')}
 Dubbelrum fre-lö: ${chk('dubbelrum_extra')}
 
-=== MÅLTIDER ===
+=== MÅLTIDER (${harPaket ? 'ingår i paket' : 'valda separat'}) ===
 Lördagsfika: ${chk('lor_fika')}
 Lördagslunch: ${chk('lor_lunch')}
 Söndagsfika: ${chk('son_fika')}
@@ -225,7 +330,11 @@ Middag: ${chk('middag')}
 
 === MEDFÖLJANDE ===
 Tar med medföljande: ${medfolj ? 'Ja' : 'Nej'}${medfolj ? `
-Namn medföljande: ${get('medfolj_namn')}
+Förnamn: ${medfoljFn}
+Efternamn: ${medfoljEn}
+MedlemsID: ${get('medfolj_myclub_id')}
+Personnummer: ${get('medfolj_pnr')}
+Roll/kategori: ${get('medfolj_roll')}
 Lördagsfika: ${chk('medfolj_lor_fika')}
 Lördagslunch: ${chk('medfolj_lor_lunch')}
 Söndagsfika: ${chk('medfolj_son_fika')}
