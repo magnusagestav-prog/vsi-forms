@@ -376,7 +376,9 @@ Notering: ${get('notering')}`;
     rt: get('resa_typ'), ro: get('resa_ort'),
     sk: get('specialkost'), an: get('anpassning'), no: get('notering'),
   };
-  const _fsEnc = btoa(unescape(encodeURIComponent(JSON.stringify(_fsData))));
+  // ASCII-säker encoding: escapa non-ASCII så btoa fungerar utan unescape-trick
+  const _fsJson = JSON.stringify(_fsData).replace(/[\u0080-\uffff]/g, c => '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4));
+  const _fsEnc = btoa(_fsJson);
 
   try {
     await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
