@@ -219,6 +219,10 @@
       </div>
     </div>
 
+    <div id="val-fel" style="display:none;background:#fff3cd;border:1px solid #f0ad4e;border-radius:6px;
+         padding:10px 14px;margin-bottom:10px;color:#7a4f00;font-size:14px;">
+      ⚠ Du måste välja minst ett alternativ (kongresspaket, rum eller måltid) för att skicka anmälan.
+    </div>
     <button type="submit" class="skicka-btn" id="skicka-btn">Skicka anmälan</button>
   </form>
 
@@ -331,6 +335,25 @@ document.getElementById('anm-form').addEventListener('submit', async e => {
   const medfoljFn = get('medfolj_fn');
   const medfoljEn = get('medfolj_en');
   const medfoljNamn = [medfoljFn, medfoljEn].filter(Boolean).join(' ');
+
+  // Validering: minst ett val krävs
+  const harNågotValt = harPaket
+    || e.target.querySelector('[name="enkelrum_extra"]')?.checked
+    || e.target.querySelector('[name="dubbelrum_extra"]')?.checked
+    || e.target.querySelector('[name="lor_fika"]')?.checked
+    || e.target.querySelector('[name="lor_lunch"]')?.checked
+    || e.target.querySelector('[name="son_fika"]')?.checked
+    || e.target.querySelector('[name="son_lunch"]')?.checked
+    || e.target.querySelector('[name="middag"]')?.checked;
+  if (!harNågotValt) {
+    const felDiv = document.getElementById('val-fel');
+    if (felDiv) { felDiv.style.display = 'block'; felDiv.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    btn.disabled = false;
+    btn.textContent = 'Skicka anmälan';
+    return;
+  }
+  const felDiv = document.getElementById('val-fel');
+  if (felDiv) felDiv.style.display = 'none';
 
   const body = `[VSI-FS-ANM]
 Namn: ${pNamn}
