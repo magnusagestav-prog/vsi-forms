@@ -665,7 +665,14 @@ async function skickaFormulär() {
     </tfoot>
   </table>
   ${kvittoNote}
-</div>`;
+</div>
+<!-- UTLAGG_DATA:${JSON.stringify({
+  organisation: ORG_VALD,
+  namn, personnr, clearing, konto, email,
+  ändamål, rader, total,
+  antal_kvitton: kvittonLista.length,
+  datum_insand: datum,
+})} -->`;
 
   const subject = `[UTLAGG:${ORG_VALD}|${namn}|${datum}|${formatKr(total)}]`;
 
