@@ -398,6 +398,9 @@ const CLEARING_PARAM= params.get('clearing') || '';
 const KONTO_PARAM   = params.get('konto')    || '';
 const EMAIL_PARAM   = params.get('email')    || '';
 
+// ── Utläggstabell ─────────────────────────────────────────────────────────────
+const KATEGORIER = ['Resa', 'Mat & dryck', 'Logi', 'Material/förbrukningsvara', 'Porto/frakt', 'Representation', 'Övrigt'];
+
 // ── Initiering ────────────────────────────────────────────────────────────────
 (function init() {
   document.getElementById('f-namn').value     = NAMN_PARAM;
@@ -449,9 +452,6 @@ function orgDisplayNamn(kod) {
   };
   return karta[kod?.toLowerCase()] || kod || '';
 }
-
-// ── Utläggstabell ─────────────────────────────────────────────────────────────
-const KATEGORIER = ['Resa', 'Mat & dryck', 'Logi', 'Material/förbrukningsvara', 'Porto/frakt', 'Representation', 'Övrigt'];
 
 function läggTillRad(datum = '', besk = '', kat = '', belopp = '') {
   const tbody = document.getElementById('utlagg-rader');
