@@ -219,6 +219,23 @@
       </div>
     </div>
 
+    <div class="sek">
+      <div class="sek-rubrik">Betalningssätt</div>
+      <p style="font-size:13px;color:#555;margin:0 0 10px;">Hur ska din deltagaravgift betalas?</p>
+      <label>
+        <input type="radio" name="betalningssatt" value="swish" id="bet-swish" required>
+        <span>Betalar privat via Swish</span>
+      </label>
+      <label>
+        <input type="radio" name="betalningssatt" value="faktura" id="bet-faktura">
+        <span>Fakturera föreningen</span>
+      </label>
+      <label>
+        <input type="radio" name="betalningssatt" value="saldo" id="bet-saldo">
+        <span>Belasta föreningens saldo</span>
+      </label>
+    </div>
+
     <button type="submit" class="skicka-btn" id="skicka-btn">Skicka anmälan</button>
   </form>
 
@@ -371,6 +388,9 @@ Reseersättning: ${get('resa_kr')} kr
 Färdsätt: ${get('resa_typ')}
 Avreseort: ${get('resa_ort')}
 
+=== BETALNING ===
+Betalningssatt: ${get('betalningssatt')}
+
 === ÖVRIGT ===
 Specialkost: ${get('specialkost')}
 Anpassning: ${get('anpassning')}
@@ -400,6 +420,7 @@ Notering: ${get('notering')}`;
     rk: parseInt(get('resa_kr')||'0')||0,
     rt: get('resa_typ'), ro: get('resa_ort'),
     sk: get('specialkost'), an: get('anpassning'), no: get('notering'),
+    bs: get('betalningssatt'),
   };
   // ASCII-säker encoding: escapa non-ASCII så btoa fungerar utan unescape-trick
   const _fsJson = JSON.stringify(_fsData).replace(/[\u0080-\uffff]/g, c => '\\u' + ('0000' + c.charCodeAt(0).toString(16)).slice(-4));

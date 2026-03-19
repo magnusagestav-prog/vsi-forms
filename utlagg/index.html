@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Utläggsformulär</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<script src="../config.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: #f3f4f6;
+  color: #1a1a2e;
+  font-size: 14px;
+  min-height: 100vh;
+  padding: 20px 16px 60px;
+}
+
+/* ── Topbar ── */
+#topbar {
+  max-width: 820px; margin: 0 auto 20px;
+  background: #1e3a5f; color: #fff;
+  border-radius: 8px; padding: 14px 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+}
+#topbar-org { font-size: 16px; font-weight: 700; }
+#topbar-titel { font-size: 13px; color: #93c5fd; }
+#topbar-knappar { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── Knappar ── */
+.btn {
+  border: none; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 600; padding: 8px 18px; transition: .15s;
+}
+.btn-primär  { background: #2563eb; color: #fff; }
+.btn-primär:hover  { background: #1d4ed8; }
+.btn-grön    { background: #16a34a; color: #fff; }
+.btn-grön:hover    { background: #15803d; }
+.btn-ghost   { background: #e2e8f0; color: #374151; }
+.btn-ghost:hover   { background: #d1d5db; }
+.btn-liten   { padding: 4px 10px; font-size: 12px; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Blankett-wrapper ── */
+#blankett {
+  max-width: 820px; margin: 0 auto;
+  background: #fff; border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.1);
+  overflow: hidden;
+}
+
+/* ── Blankett-header ── */
+#bl-header {
+  background: #1e3a5f; color: #fff;
+  padding: 20px 28px 14px;
+}
+#bl-header-top { display: flex; justify-content: space-between; align-items: flex-start; }
+#bl-org-namn { font-size: 18px; font-weight: 700; }
+#bl-rubrik { font-size: 22px; font-weight: 700; margin-top: 6px; color: #bfdbfe; }
+#bl-datum-rad { font-size: 12px; color: #93c5fd; margin-top: 4px; }
+
+/* ── Sektion ── */
+.sek { padding: 18px 28px; border-bottom: 1px solid #e5e7eb; }
+.sek:last-child { border-bottom: none; }
+.sek-rubrik {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .6px; color: #6b7280; margin-bottom: 12px;
+}
+
+/* ── Fält-grid ── */
+.fält-grid { display: grid; gap: 12px; }
+.fält-grid-2 { grid-template-columns: 1fr 1fr; }
+.fält-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+.fält-grupp { display: flex; flex-direction: column; gap: 4px; }
+.fält-grupp label {
+  font-size: 11px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .4px;
+}
+.fält-grupp input, .fält-grupp textarea, .fält-grupp select {
+  border: 1px solid #d1d5db; border-radius: 5px; padding: 7px 10px;
+  font-size: 13px; color: #1a1a2e; background: #fff; outline: none;
+  font-family: inherit;
+}
+.fält-grupp input:focus, .fält-grupp textarea:focus, .fält-grupp select:focus {
+  border-color: #2563eb; box-shadow: 0 0 0 2px #dbeafe;
+}
+.fält-grupp input[readonly] { background: #f8fafc; color: #374151; }
+textarea { resize: vertical; min-height: 60px; }
+
+/* ── Organisation-väljare ── */
+#org-väljar-rad {
+  display: none;
+  margin-bottom: 16px;
+}
+#org-väljar-rad select {
+  border: 1px solid #d1d5db; border-radius: 5px; padding: 7px 10px;
+  font-size: 13px; width: 100%; font-family: inherit; outline: none;
+}
+#org-väljar-rad select:focus { border-color: #2563eb; }
+
+/* ── Utläggs-tabell ── */
+#utlagg-tabell-wrap { overflow-x: auto; }
+table#utlagg-tabell {
+  width: 100%; border-collapse: collapse; font-size: 13px; min-width: 620px;
+}
+#utlagg-tabell thead th {
+  background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .4px;
+  padding: 7px 8px; text-align: left; border-bottom: 2px solid #e2e8f0;
+}
+#utlagg-tabell tbody td { padding: 5px 6px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+#utlagg-tabell tbody tr:hover td { background: #fafbfe; }
+#utlagg-tabell input, #utlagg-tabell select {
+  border: 1px solid #e2e8f0; border-radius: 4px; padding: 4px 6px;
+  font-size: 12px; color: #1a1a2e; background: #fff; width: 100%;
+  outline: none; font-family: inherit;
+}
+#utlagg-tabell input:focus, #utlagg-tabell select:focus {
+  border-color: #2563eb;
+}
+#utlagg-tabell .col-datum   { width: 120px; }
+#utlagg-tabell .col-besk    { }
+#utlagg-tabell .col-kat     { width: 140px; }
+#utlagg-tabell .col-belopp  { width: 110px; }
+#utlagg-tabell .col-del     { width: 36px; text-align: center; }
+.del-rad-btn {
+  background: none; border: none; cursor: pointer; color: #ef4444;
+  font-size: 16px; line-height: 1; padding: 2px 4px; border-radius: 4px;
+}
+.del-rad-btn:hover { background: #fee2e2; }
+
+/* ── Summering ── */
+#summering {
+  margin-top: 12px; display: flex; justify-content: flex-end; gap: 20px; flex-wrap: wrap;
+}
+.summa-block {
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+  padding: 10px 16px; text-align: right; min-width: 170px;
+}
+.summa-block .summa-etikett { font-size: 11px; color: #6b7280; text-transform: uppercase; letter-spacing: .4px; }
+.summa-block .summa-värde   { font-size: 20px; font-weight: 700; color: #1e3a5f; margin-top: 2px; }
+.kategori-rad { font-size: 12px; color: #6b7280; margin-top: 2px; }
+
+/* ── Kvitton ── */
+#kvitto-zon {
+  border: 2px dashed #d1d5db; border-radius: 6px; padding: 20px;
+  text-align: center; cursor: pointer; transition: .15s;
+  background: #f9fafb; color: #6b7280;
+}
+#kvitto-zon:hover, #kvitto-zon.drag-over { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+#kvitto-zon p { margin-top: 6px; font-size: 12px; }
+#kvitto-lista { margin-top: 12px; display: grid; gap: 8px; }
+.kvitto-kort {
+  display: flex; align-items: center; gap: 10px;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px;
+}
+.kvitto-preview { width: 48px; height: 48px; object-fit: cover;
+                  border-radius: 4px; border: 1px solid #e2e8f0; flex-shrink: 0; }
+.kvitto-preview-pdf { width: 48px; height: 48px; background: #fef2f2; border-radius: 4px;
+                       border: 1px solid #fecaca; display: flex; align-items: center;
+                       justify-content: center; font-size: 20px; flex-shrink: 0; }
+.kvitto-info { flex: 1; }
+.kvitto-namn  { font-size: 12px; font-weight: 600; }
+.kvitto-stlk  { font-size: 11px; color: #9ca3af; }
+.kvitto-ta-bort {
+  background: none; border: none; color: #ef4444; cursor: pointer; font-size: 18px;
+  padding: 2px 6px; border-radius: 4px;
+}
+.kvitto-ta-bort:hover { background: #fee2e2; }
+
+/* ── Info-ruta ── */
+.info-ruta {
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px;
+  padding: 10px 14px; font-size: 12px; color: #1d4ed8; margin-top: 10px;
+}
+
+/* ── Knappar-rad ── */
+#knappar-rad {
+  display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  padding: 16px 28px 20px;
+}
+#status-meddelande {
+  font-size: 12px; padding: 6px 12px; border-radius: 5px;
+  display: none;
+}
+#status-meddelande.ok  { background: #dcfce7; color: #166534; display: block; }
+#status-meddelande.fel { background: #fee2e2; color: #991b1b; display: block; }
+
+/* ══════════════════════════════════════════════════════════
+   PRINT-STIL  (A4, professionell blankett)
+══════════════════════════════════════════════════════════ */
+@media print {
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff; padding: 0; font-size: 12px; }
+
+  #topbar, #knappar-rad, #kvitto-zon, .del-rad-btn,
+  #add-rad-btn, #kvitto-input, .info-ruta, #org-väljar-rad { display: none !important; }
+
+  #blankett {
+    max-width: 100%; border-radius: 0; box-shadow: none;
+    page-break-inside: avoid;
+  }
+
+  #bl-header { padding: 14px 20px 10px; }
+  #bl-org-namn { font-size: 15px; }
+  #bl-rubrik { font-size: 18px; }
+
+  .sek { padding: 12px 20px; }
+
+  #utlagg-tabell input, #utlagg-tabell select {
+    border: none; background: transparent; padding: 0;
+  }
+  .fält-grupp input, .fält-grupp textarea, .fält-grupp select {
+    border: none; border-bottom: 1px solid #d1d5db;
+    border-radius: 0; background: transparent; padding: 2px 0;
+  }
+
+  #summering { justify-content: flex-end; }
+
+  /* Kvitton på egna sidor */
+  #kvitto-lista { margin-top: 0; }
+  .kvitto-kort { display: none; }
+  .kvitto-utskrift { display: block !important; }
+  .kvitto-sidbrytning { page-break-before: always; }
+  .kvitto-utskrift-wrapper {
+    page-break-inside: avoid;
+    text-align: center;
+    padding: 20px;
+  }
+  .kvitto-utskrift-rubrik {
+    font-size: 12px; color: #6b7280; font-weight: 600;
+    text-align: left; margin-bottom: 8px;
+    text-transform: uppercase; letter-spacing: .4px;
+  }
+  .kvitto-utskrift img {
+    max-width: 100%; max-height: 240mm;
+    border: 1px solid #d1d5db; border-radius: 4px;
+  }
+  .kvitto-utskrift-namn {
+    font-size: 11px; color: #9ca3af; margin-top: 6px;
+    text-align: center;
+  }
+}
+
+@media (max-width: 600px) {
+  .fält-grid-2, .fält-grid-3 { grid-template-columns: 1fr; }
+  .fält-grupp[style*="span 2"] { grid-column: span 1 !important; }
+  body { padding: 12px 10px 60px; }
+  .sek { padding: 14px 16px; }
+  #knappar-rad { padding: 12px 16px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar (döljs vid utskrift) ── -->
+<div id="topbar">
+  <div>
+    <div id="topbar-org">Utläggsformulär</div>
+    <div id="topbar-titel">Fyll i dina utlägg, ladda upp kvitton och skicka till administratören</div>
+  </div>
+  <div id="topbar-knappar">
+    <button type="button" class="btn btn-grön" onclick="skrivUt()">🖨 Spara PDF</button>
+    <button type="button" class="btn btn-primär" id="btn-skicka" onclick="skickaFormulär()">
+      📨 Skicka till administratören
+    </button>
+  </div>
+</div>
+
+<!-- ── Blankett ── -->
+<div id="blankett">
+
+  <!-- Rubrik -->
+  <div id="bl-header">
+    <div id="bl-header-top">
+      <div>
+        <div id="bl-org-namn">Organisation</div>
+        <div id="bl-rubrik">Utläggsspecifikation</div>
+      </div>
+      <div id="bl-datum-rad" style="text-align:right"></div>
+    </div>
+  </div>
+
+  <!-- Organisation-väljare (visas om flera org i URL) -->
+  <div class="sek" id="org-väljar-rad" style="display:none">
+    <div class="sek-rubrik">Organisation</div>
+    <select id="org-select" onchange="byttOrg(this.value)"></select>
+  </div>
+
+  <!-- Personuppgifter -->
+  <div class="sek">
+    <div class="sek-rubrik">Personuppgifter</div>
+    <div class="fält-grid fält-grid-2">
+      <div class="fält-grupp">
+        <label>Namn</label>
+        <input type="text" id="f-namn" placeholder="Ditt fullständiga namn">
+      </div>
+      <div class="fält-grupp">
+        <label>Personnummer</label>
+        <input type="text" id="f-personnr" placeholder="ÅÅMMDD-XXXX">
+      </div>
+      <div class="fält-grupp">
+        <label>Clearing-nummer</label>
+        <input type="text" id="f-clearing" placeholder="XXXX">
+      </div>
+      <div class="fält-grupp">
+        <label>Kontonummer</label>
+        <input type="text" id="f-konto" placeholder="XXXXXXX">
+      </div>
+      <div class="fält-grupp" style="grid-column: span 2;">
+        <label>E-postadress</label>
+        <input type="email" id="f-email" placeholder="din@epost.se">
+      </div>
+    </div>
+  </div>
+
+  <!-- Ändamål -->
+  <div class="sek">
+    <div class="sek-rubrik">Ändamål / vad gäller utlägget?</div>
+    <div class="fält-grupp">
+      <textarea id="f-andamal" placeholder="Beskriv vad utlägget avser, t.ex. konferenskostnader maj 2026, reseersättning, kontorsmaterial…" rows="3"></textarea>
+    </div>
+  </div>
+
+  <!-- Utläggstabell -->
+  <div class="sek">
+    <div class="sek-rubrik">Utläggsspecifikation</div>
+    <div id="utlagg-tabell-wrap">
+      <table id="utlagg-tabell">
+        <thead>
+          <tr>
+            <th class="col-datum">Datum</th>
+            <th class="col-besk">Beskrivning</th>
+            <th class="col-kat">Kategori</th>
+            <th class="col-belopp">Belopp (kr)</th>
+            <th class="col-del" aria-label="Ta bort"></th>
+          </tr>
+        </thead>
+        <tbody id="utlagg-rader"></tbody>
+      </table>
+    </div>
+
+    <button id="add-rad-btn" type="button" class="btn btn-ghost btn-liten" onclick="läggTillRad()" style="margin-top:10px">
+      ＋ Lägg till rad
+    </button>
+
+    <!-- Summering -->
+    <div id="summering">
+      <div id="kategori-summor"></div>
+      <div class="summa-block">
+        <div class="summa-etikett">Totalt att ersätta</div>
+        <div class="summa-värde" id="total-belopp">0,00 kr</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kvitton -->
+  <div class="sek" id="kvitto-sektion">
+    <div class="sek-rubrik">Kvitton och underlag</div>
+    <div id="kvitto-zon" onclick="document.getElementById('kvitto-input').click()"
+         ondragover="e=>e.preventDefault()" ondrop="hanteraDrop(event)">
+      <div style="font-size: 28px;">📎</div>
+      <div style="font-weight:600;margin-top:4px">Klicka eller dra hit kvitton</div>
+      <p>JPG, PNG, PDF – flera filer tillåtna</p>
+    </div>
+    <input type="file" id="kvitto-input" accept=".jpg,.jpeg,.png,.pdf,.webp"
+           multiple style="display:none" onchange="hanteraFiler(this.files)">
+    <div id="kvitto-lista"></div>
+    <div class="info-ruta" id="kvitto-info" style="display:none">
+      📎 Kvittona sparas med formuläret när du väljer <strong>Spara PDF</strong> — de ingår ej i e-postmeddelandet.
+    </div>
+
+    <!-- Kvitton för utskrift – skapas dynamiskt -->
+    <div id="kvitto-utskrift-container"></div>
+  </div>
+
+  <!-- Knappar -->
+  <div id="knappar-rad">
+    <button type="button" class="btn btn-grön" onclick="skrivUt()">🖨 Spara PDF</button>
+    <button type="button" class="btn btn-primär" id="btn-skicka2" onclick="skickaFormulär()">
+      📨 Skicka till administratören
+    </button>
+    <div id="status-meddelande"></div>
+  </div>
+
+</div><!-- #blankett -->
+
+<script>
+// ── URL-parametrar ────────────────────────────────────────────────────────────
+const params = new URLSearchParams(window.location.search);
+const ORGS_PARAM    = (params.get('org') || '').split(',').map(s => s.trim()).filter(Boolean);
+let   ORG_VALD      = ORGS_PARAM[0] || '';
+const NAMN_PARAM    = params.get('namn')     || '';
+const PERSONNR_PARAM= params.get('personnr') || '';
+const CLEARING_PARAM= params.get('clearing') || '';
+const KONTO_PARAM   = params.get('konto')    || '';
+const EMAIL_PARAM   = params.get('email')    || '';
+
+// ── Initiering ────────────────────────────────────────────────────────────────
+(function init() {
+  document.getElementById('f-namn').value     = NAMN_PARAM;
+  document.getElementById('f-personnr').value = PERSONNR_PARAM;
+  document.getElementById('f-clearing').value = CLEARING_PARAM;
+  document.getElementById('f-konto').value    = KONTO_PARAM;
+  document.getElementById('f-email').value    = EMAIL_PARAM;
+
+  // Flera org: visa väljare
+  if (ORGS_PARAM.length > 1) {
+    const sel = document.getElementById('org-select');
+    ORGS_PARAM.forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o;
+      opt.textContent = orgDisplayNamn(o);
+      sel.appendChild(opt);
+    });
+    document.getElementById('org-väljar-rad').style.display = '';
+  }
+
+  sättOrgRubrik(ORG_VALD);
+
+  const nu = new Date().toLocaleDateString('sv-SE', { year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('bl-datum-rad').textContent = `Datum: ${nu}`;
+
+  läggTillRad();
+
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+})();
+
+function byttOrg(val) {
+  ORG_VALD = val;
+  sättOrgRubrik(val);
+}
+
+function sättOrgRubrik(org) {
+  const namn = orgDisplayNamn(org);
+  document.getElementById('bl-org-namn').textContent = namn || 'Organisation';
+  document.getElementById('topbar-org').textContent  = namn || 'Utläggsformulär';
+}
+
+function orgDisplayNamn(kod) {
+  const karta = {
+    'vsi':  'Vänskapsförbundet Sverige-Israel',
+    'kdv':  'Kristdemokraterna Västerås',
+    'kd':   'Kristdemokraterna Västerås',
+    'funktionsrätt västmanland': 'Funktionsrätt Västmanland',
+    'silenos': 'Silenos Solutions AB',
+  };
+  return karta[kod?.toLowerCase()] || kod || '';
+}
+
+// ── Utläggstabell ─────────────────────────────────────────────────────────────
+const KATEGORIER = ['Resa', 'Mat & dryck', 'Logi', 'Material/förbrukningsvara', 'Porto/frakt', 'Representation', 'Övrigt'];
+
+function läggTillRad(datum = '', besk = '', kat = '', belopp = '') {
+  const tbody = document.getElementById('utlagg-rader');
+  const id = `rad-${Date.now()}-${Math.random().toString(36).slice(2,6)}`;
+  const opts = KATEGORIER.map(k => `<option value="${k}" ${k===kat?'selected':''}>${k}</option>`).join('');
+  const tr = document.createElement('tr');
+  tr.id = id;
+  tr.innerHTML = `
+    <td class="col-datum">
+      <input type="date" value="${datum}" onchange="räknaSummor()">
+    </td>
+    <td class="col-besk">
+      <input type="text" value="${besk}" placeholder="Beskriv utlägget…" onchange="räknaSummor()">
+    </td>
+    <td class="col-kat">
+      <select onchange="räknaSummor()">${opts}</select>
+    </td>
+    <td class="col-belopp">
+      <input type="number" value="${belopp}" placeholder="0,00" min="0" step="0.01"
+             oninput="räknaSummor()" style="text-align:right">
+    </td>
+    <td class="col-del">
+      <button class="del-rad-btn" onclick="taBortRad('${id}')" title="Ta bort rad">✕</button>
+    </td>`;
+  tbody.appendChild(tr);
+  tr.querySelector('input[type=date]').focus();
+}
+
+function taBortRad(id) {
+  document.getElementById(id)?.remove();
+  räknaSummor();
+}
+
+function läsaRader() {
+  const rader = [];
+  document.querySelectorAll('#utlagg-rader tr').forEach(tr => {
+    const inputs = tr.querySelectorAll('input, select');
+    const datum  = inputs[0].value;
+    const besk   = inputs[1].value.trim();
+    const kat    = inputs[2].value;
+    const belopp = parseFloat(inputs[3].value) || 0;
+    if (besk || belopp) rader.push({ datum, beskrivning: besk, kategori: kat, belopp });
+  });
+  return rader;
+}
+
+function räknaSummor() {
+  const rader = läsaRader();
+  const total = rader.reduce((s, r) => s + r.belopp, 0);
+  const perKat = {};
+  rader.forEach(r => { if (r.belopp) perKat[r.kategori] = (perKat[r.kategori] || 0) + r.belopp; });
+  const katHtml = Object.entries(perKat)
+    .sort((a,b) => b[1]-a[1])
+    .map(([k,v]) => `<div class="kategori-rad">${k}: <b>${formatKr(v)}</b></div>`)
+    .join('');
+  document.getElementById('kategori-summor').innerHTML = katHtml
+    ? `<div class="summa-block"><div class="summa-etikett">Per kategori</div>${katHtml}</div>` : '';
+  document.getElementById('total-belopp').textContent = formatKr(total);
+}
+
+function formatKr(belopp) {
+  return belopp.toLocaleString('sv-SE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' kr';
+}
+
+// ── Kvitton ───────────────────────────────────────────────────────────────────
+let kvittonLista = [];
+
+function hanteraDrop(e) {
+  e.preventDefault();
+  document.getElementById('kvitto-zon').classList.remove('drag-over');
+  hanteraFiler(e.dataTransfer.files);
+}
+
+document.getElementById('kvitto-zon').addEventListener('dragover', e => {
+  e.preventDefault(); e.currentTarget.classList.add('drag-over');
+});
+document.getElementById('kvitto-zon').addEventListener('dragleave', e => {
+  e.currentTarget.classList.remove('drag-over');
+});
+
+function hanteraFiler(files) {
+  Array.from(files).forEach(fil => {
+    if (kvittonLista.find(k => k.namn === fil.name && k.storlek === fil.size)) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      kvittonLista.push({
+        id:      `kv-${Date.now()}-${Math.random().toString(36).slice(2,6)}`,
+        namn:    fil.name,
+        storlek: fil.size,
+        typ:     fil.type,
+        dataUrl: e.target.result,
+      });
+      renderKvitton();
+    };
+    reader.readAsDataURL(fil);
+  });
+}
+
+function renderKvitton() {
+  const lista    = document.getElementById('kvitto-lista');
+  const utskrift = document.getElementById('kvitto-utskrift-container');
+  const infoRuta = document.getElementById('kvitto-info');
+
+  infoRuta.style.display = kvittonLista.length ? '' : 'none';
+
+  if (!kvittonLista.length) { lista.innerHTML = ''; utskrift.innerHTML = ''; return; }
+
+  lista.innerHTML = kvittonLista.map(k => {
+    const ärBild  = k.typ.startsWith('image/');
+    const preview = ärBild
+      ? `<img src="${k.dataUrl}" class="kvitto-preview" alt="${k.namn}">`
+      : `<div class="kvitto-preview-pdf">📄</div>`;
+    const stlk = k.storlek < 1024*1024
+      ? `${(k.storlek/1024).toFixed(0)} KB` : `${(k.storlek/1024/1024).toFixed(1)} MB`;
+    return `<div class="kvitto-kort">
+      ${preview}
+      <div class="kvitto-info"><div class="kvitto-namn">${k.namn}</div><div class="kvitto-stlk">${stlk}</div></div>
+      <button class="kvitto-ta-bort" onclick="taBortKvitto('${k.id}')" title="Ta bort">✕</button>
+    </div>`;
+  }).join('');
+
+  utskrift.innerHTML = kvittonLista.map((k, i) => {
+    const ärBild   = k.typ.startsWith('image/');
+    const innehåll = ärBild
+      ? `<img src="${k.dataUrl}" style="max-width:100%;max-height:240mm;border:1px solid #d1d5db;border-radius:4px;">`
+      : `<div style="padding:40px;text-align:center;color:#6b7280;border:2px dashed #d1d5db;border-radius:8px;">
+           <div style="font-size:48px;">📄</div>
+           <div style="margin-top:8px;font-weight:600;">${k.namn}</div>
+           <div style="font-size:12px;margin-top:4px;">PDF-kvitto (se originalfil)</div>
+         </div>`;
+    return `<div class="kvitto-utskrift kvitto-sidbrytning" style="display:none">
+      <div class="kvitto-utskrift-wrapper">
+        <div class="kvitto-utskrift-rubrik">Kvitto ${i+1} av ${kvittonLista.length}: ${k.namn}</div>
+        ${innehåll}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function taBortKvitto(id) {
+  kvittonLista = kvittonLista.filter(k => k.id !== id);
+  renderKvitton();
+}
+
+// ── Utskrift / Spara PDF ──────────────────────────────────────────────────────
+function skrivUt() {
+  document.querySelectorAll('.kvitto-utskrift').forEach(el => el.style.display = 'block');
+  window.print();
+  setTimeout(() => {
+    document.querySelectorAll('.kvitto-utskrift').forEach(el => el.style.display = 'none');
+  }, 1000);
+}
+
+// ── Skicka via EmailJS ────────────────────────────────────────────────────────
+async function skickaFormulär() {
+  const namn     = document.getElementById('f-namn').value.trim();
+  const personnr = document.getElementById('f-personnr').value.trim();
+  const clearing = document.getElementById('f-clearing').value.trim();
+  const konto    = document.getElementById('f-konto').value.trim();
+  const email    = document.getElementById('f-email').value.trim();
+  const ändamål  = document.getElementById('f-andamal').value.trim();
+  const rader    = läsaRader();
+
+  if (!namn) { visaStatus('Ange ditt namn.', 'fel'); return; }
+  if (!rader.length) { visaStatus('Lägg till minst en utläggsrad.', 'fel'); return; }
+
+  const total  = rader.reduce((s, r) => s + r.belopp, 0);
+  const datum  = new Date().toISOString().slice(0, 10);
+  const orgNamn = orgDisplayNamn(ORG_VALD) || ORG_VALD;
+
+  // Bygg HTML-tabell för e-postbrödtext
+  const raderHtml = rader.map(r =>
+    `<tr><td style="padding:4px 8px;border:1px solid #e2e8f0">${r.datum || '–'}</td>` +
+    `<td style="padding:4px 8px;border:1px solid #e2e8f0">${r.beskrivning}</td>` +
+    `<td style="padding:4px 8px;border:1px solid #e2e8f0">${r.kategori}</td>` +
+    `<td style="padding:4px 8px;border:1px solid #e2e8f0;text-align:right">${formatKr(r.belopp)}</td></tr>`
+  ).join('');
+
+  const kvittoNote = kvittonLista.length
+    ? `<p style="margin-top:12px;color:#6b7280;font-size:12px;">📎 ${kvittonLista.length} kvitto(n) – sparas separat som PDF av avsändaren.</p>`
+    : '';
+
+  const body = `
+<div style="font-family:Arial,sans-serif;font-size:13px;color:#1a1a2e">
+  <h2 style="color:#1e3a5f;margin-bottom:16px">Utläggsspecifikation</h2>
+  <table style="border-collapse:collapse;margin-bottom:16px">
+    <tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">Organisation</td><td>${orgNamn}</td></tr>
+    <tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">Namn</td><td>${namn}</td></tr>
+    ${personnr ? `<tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">Personnummer</td><td>${personnr}</td></tr>` : ''}
+    ${clearing ? `<tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">Clearing</td><td>${clearing}</td></tr>` : ''}
+    ${konto    ? `<tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">Konto</td><td>${konto}</td></tr>` : ''}
+    ${email    ? `<tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">E-post</td><td>${email}</td></tr>` : ''}
+    <tr><td style="padding:3px 12px 3px 0;color:#6b7280;font-weight:600">Inlämnat</td><td>${datum}</td></tr>
+  </table>
+  ${ändamål ? `<p style="margin-bottom:16px"><strong>Ändamål:</strong> ${ändamål}</p>` : ''}
+  <table style="border-collapse:collapse;width:100%;margin-bottom:12px">
+    <thead>
+      <tr style="background:#f1f5f9">
+        <th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left">Datum</th>
+        <th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left">Beskrivning</th>
+        <th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:left">Kategori</th>
+        <th style="padding:6px 8px;border:1px solid #e2e8f0;text-align:right">Belopp</th>
+      </tr>
+    </thead>
+    <tbody>${raderHtml}</tbody>
+    <tfoot>
+      <tr style="background:#f8fafc;font-weight:700">
+        <td colspan="3" style="padding:6px 8px;border:1px solid #e2e8f0;text-align:right">Totalt:</td>
+        <td style="padding:6px 8px;border:1px solid #e2e8f0;text-align:right">${formatKr(total)}</td>
+      </tr>
+    </tfoot>
+  </table>
+  ${kvittoNote}
+</div>`;
+
+  const subject = `[UTLAGG:${ORG_VALD}|${namn}|${datum}|${formatKr(total)}]`;
+
+  const btns = [document.getElementById('btn-skicka'), document.getElementById('btn-skicka2')];
+  btns.forEach(b => { b.disabled = true; b.textContent = '⏳ Skickar…'; });
+  visaStatus('', '');
+
+  try {
+    await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+      subject,
+      body,
+      from_name: namn || 'Okänd',
+    });
+    visaStatus('✓ Utlägget har skickats till administratören! Du kan nu spara formuläret med kvitton som PDF.', 'ok');
+    btns.forEach(b => b.textContent = '✓ Skickat');
+  } catch (err) {
+    console.error('EmailJS-fel:', err);
+    visaStatus('Fel vid inskick – försök igen eller kontakta administratören.', 'fel');
+    btns.forEach(b => { b.disabled = false; b.textContent = '📨 Skicka till administratören'; });
+  }
+}
+
+function visaStatus(msg, typ) {
+  const el = document.getElementById('status-meddelande');
+  el.textContent = msg;
+  el.className = typ;
+  if (!msg) el.style.display = 'none';
+}
+</script>
+</body>
+</html>
