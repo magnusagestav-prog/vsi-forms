@@ -43,7 +43,11 @@
   </div>
 
   <div class="body" id="formularet" style="display:none;">
-    <div class="skrivet-av">Inloggad som: <strong id="visningsnamn">…</strong><br><span style="font-weight:400;font-size:12px;">Om ett alias/pseudonym är satt för dig visas det istället som författare på hemsidan.</span></div>
+    <div class="skrivet-av">Inloggad som: <strong id="visningsnamn">…</strong></div>
+
+    <label for="f-pseudonym">Namn som visas publikt på hemsidan</label>
+    <input type="text" id="f-pseudonym" placeholder="Ditt namn (eller en pseudonym)">
+    <div class="hint">Lämna tomt för att visas med ditt riktiga namn. Skriv en pseudonym här om du vill vara anonym — det gäller bara det här inlägget.</div>
 
     <label for="f-rubrik">Rubrik</label>
     <input type="text" id="f-rubrik" placeholder="Rubrik på inlägget">
@@ -91,6 +95,9 @@ async function initiera() {
     const data = await r.json();
     if (!r.ok) { visaOgiltig(data?.message); return; }
     document.getElementById('visningsnamn').textContent = data.namn;
+    const pseudonymEl = document.getElementById('f-pseudonym');
+    pseudonymEl.value = data.alias || '';
+    pseudonymEl.placeholder = data.namn;
     document.getElementById('formularet').style.display = 'block';
     läsKategorier();
   } catch (e) {
@@ -141,10 +148,11 @@ async function skicka() {
   const felBox = document.getElementById('fel-box');
   felBox.style.display = 'none';
 
-  const rubrik  = document.getElementById('f-rubrik').value.trim();
-  const text    = document.getElementById('f-text').value.trim();
-  const ingress = document.getElementById('f-ingress').value.trim();
-  const kategori = document.getElementById('f-kategori').value;
+  const rubrik    = document.getElementById('f-rubrik').value.trim();
+  const text      = document.getElementById('f-text').value.trim();
+  const ingress   = document.getElementById('f-ingress').value.trim();
+  const kategori  = document.getElementById('f-kategori').value;
+  const pseudonym = document.getElementById('f-pseudonym').value.trim();
 
   if (!rubrik) {
     felBox.textContent = 'Fyll i en rubrik innan du skickar.';
@@ -160,7 +168,7 @@ async function skicka() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        token, rubrik, text, ingress,
+        token, rubrik, text, ingress, pseudonym,
         kategori_id: kategori ? parseInt(kategori) : null,
         bild: bildUrl,
       }),
