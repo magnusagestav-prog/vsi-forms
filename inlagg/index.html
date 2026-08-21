@@ -136,7 +136,9 @@ document.getElementById('f-bild').addEventListener('change', async function () {
     const r = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: fd });
     const data = await r.json();
     if (!r.ok) throw new Error(data?.error?.message || `HTTP ${r.status}`);
-    bildUrl = data.secure_url;
+    // Krymp stora bilder till max 1600 px på längsta sidan (proportionellt, ingen
+    // beskärning) via en Cloudinary-leveranstransformation, gäller alla inlägg.
+    bildUrl = data.secure_url.replace('/upload/', '/upload/c_limit,w_1600,h_1600/');
     statusEl.textContent = 'Bild uppladdad.';
   } catch (e) {
     statusEl.textContent = 'Kunde inte ladda upp bilden: ' + e.message;
