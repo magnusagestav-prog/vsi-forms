@@ -75,6 +75,7 @@
     <div class="ikon">✅</div>
     <h2>Tack! Inlägget är inskickat.</h2>
     <p>Publiceras på sverigeisrael.se med ditt innehåll, i princip oredigerat.</p>
+    <p id="bild-fel-varning" style="display:none;color:#92400E;background:#FEF3C7;border-radius:6px;padding:8px 12px;text-align:left;"></p>
   </div>
 
   <div class="ogiltig" id="ogiltig">
@@ -181,6 +182,11 @@ async function skicka() {
     if (!r.ok) throw new Error(data?.message || `HTTP ${r.status}`);
     document.getElementById('formularet').style.display = 'none';
     document.getElementById('bekraftelse').style.display = 'block';
+    if (data?.bild_fel) {
+      const varningEl = document.getElementById('bild-fel-varning');
+      varningEl.textContent = '⚠ Inlägget publicerades, men bilden kunde inte laddas upp: ' + data.bild_fel;
+      varningEl.style.display = 'block';
+    }
   } catch (e) {
     felBox.textContent = '⚠ ' + e.message;
     felBox.style.display = 'block';
