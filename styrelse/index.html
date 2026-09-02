@@ -167,14 +167,19 @@
     <button type="button" class="fm-vaxel" id="fm-vaxel" onclick="växlaFöreningsmejl()">
       &#9656; &#128233; Vilka får föreningsmejl? <span class="fm-vaxel-info" id="fm-vaxel-info">(alla just nu)</span>
     </button>
+    <div class="valfri-hjalp" style="margin:6px 0 0;">
+      Post som skickas till föreningens e-postadress vidarebefordras automatiskt till de personer
+      som är ibockade här. Bocka för alla som ska läsa föreningens inkommande post — den som inte
+      är ibockad får den inte.
+    </div>
     <div class="fm-varning" id="fm-varning" style="display:none;">
       &#9888;&#65039; Minst en person måste ha <strong>Föreningsmejl</strong> ibockad — de som ska ta emot post till föreningens adress.
     </div>
 
     <div class="valfri-avdelare"><span>Valfritt</span></div>
 
-    <!-- (A) Medlemsansvarig -->
-    <details class="valfri-sektion">
+    <!-- (A) Medlemsansvarig — öppen från start så den inte förbises -->
+    <details class="valfri-sektion" open>
       <summary>&#128231; Medlemsansvarig <span class="sum-varde" id="sum-medl-ansv">ordförande (standard)</span></summary>
       <div class="valfri-innehall">
         <div class="valfri-hjalp">Får mejl bl.a. när medlemmar tillkommer eller utträder. Ändrar ni inget är det ordföranden som får mejlet.</div>
@@ -198,8 +203,8 @@
       </div>
     </div>
 
-    <!-- (A) Kalenderadministratör -->
-    <details class="valfri-sektion">
+    <!-- (A) Kalenderadministratör — öppen från start så den inte förbises -->
+    <details class="valfri-sektion" open>
       <summary>&#128197; Kalenderadministratör <span class="sum-varde" id="sum-kal-admin">ingen vald</span></summary>
       <div class="valfri-innehall">
         <div class="valfri-hjalp">Vem lägger upp era evenemang i kalendern på <strong>sverigeisrael.se</strong>? Den ni väljer får en länk med instruktioner via mejl.</div>
@@ -223,11 +228,13 @@
       </div>
     </div>
 
-    <!-- (A) Era uppgifter på lokalföreningssidan -->
-    <details class="valfri-sektion">
+    <!-- (A) Era uppgifter på lokalföreningssidan — öppen från start så fälten faktiskt syns -->
+    <details class="valfri-sektion" open>
       <summary>&#127760; Uppgifter på lokalföreningssidan <span class="sum-varde">publika uppgifter</span></summary>
       <div class="valfri-innehall">
-        <div class="valfri-hjalp">Föreningens publika uppgifter på sverigeisrael.se. Förifyllt – ändra det som behövs, lämna tomt för att behålla. Granskas innan publicering.</div>
+        <div class="valfri-hjalp">Detta är föreningens egen sida på riksförbundets hemsida sverigeisrael.se – det
+          många ser först när de söker efter oss på er ort. Uppgifterna är förifyllda med det som står där nu;
+          ändra det som behövs och lämna tomt för att behålla. Det ni sparar uppdaterar sidan direkt.</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <label class="fs-fald"><span>Kontaktperson</span><input id="fs-kontaktperson" type="text"></label>
           <label class="fs-fald"><span>E-postadress <em style="font-weight:400;color:#888;">(föreningens fasta adress – kan ej ändras)</em></span><input id="fs-epost" type="email" readonly></label>
@@ -249,7 +256,7 @@
     <div class="skicka-footer">
       <label class="bekr-rad">
         <input type="checkbox" id="bekr-checkbox" onchange="uppdateraSkickaKnapp()">
-        <span>Jag bekräftar att detta är styrelsens <strong>slutliga sammansättning</strong> efter föreningens årsmöte i år.</span>
+        <span>Jag bekräftar att detta är <strong>aktuella uppgifter</strong> för min förening.</span>
       </label>
       <button class="skicka-knapp" id="skicka-knapp" onclick="skickaIn()" disabled>
         Skicka in styrelselistan
