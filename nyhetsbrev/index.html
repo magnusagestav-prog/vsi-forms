@@ -42,6 +42,23 @@
   .bekraftelse h2 { color: #004A99; font-size: 20px; margin: 12px 0 6px; }
   .bekraftelse p { color: #374151; font-size: 14px; }
   .hint { font-size: 11px; color: #6B7280; margin-top: 3px; }
+  .rahjalp { margin-top: 10px; border-top: 1px dashed #dde4ed; padding-top: 10px; }
+  .rahjalp-knapp { display: inline-flex; align-items: center; gap: 6px; background: #f0f4f8; border: 1px solid #ccd8e8; border-radius: 6px; padding: 7px 12px; font-size: 12px; color: #374151; cursor: pointer; }
+  .rahjalp-knapp:hover { background: #EAF4FF; }
+  .tolka-knapp { background: #004A99; color: #fff; border: none; border-radius: 6px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .tolka-knapp:hover { background: #003a78; }
+  .forhandsvisning { display: none; margin-top: 12px; border: 1px solid #cfe0f0; border-radius: 8px; padding: 14px 16px; background: #fff; }
+  .fv-etikett { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6B7280; margin-bottom: 8px; }
+  .fv-titel { font-size: 15px; font-weight: 700; color: #1F2937; line-height: 1.3; }
+  .fv-ingress { font-size: 13px; color: #374151; margin-top: 6px; line-height: 1.5; }
+  .fv-kalla { font-size: 11px; color: #6B7280; margin-top: 8px; }
+  .fv-lank { font-size: 11px; color: #004A99; margin-top: 2px; word-break: break-all; }
+  .borttaget { display: none; margin-top: 10px; background: #fff8e6; border: 1px solid #f0d78c; border-radius: 6px; padding: 10px 12px; font-size: 12px; color: #6b5200; }
+  .borttaget summary { cursor: pointer; font-weight: 700; }
+  .borttaget ul { margin: 8px 0 0 18px; }
+  .borttaget li { margin-bottom: 3px; word-break: break-all; }
+  .anvand-forslag { background: #1a8a1a; color: #fff; border: none; border-radius: 6px; padding: 7px 14px; font-size: 12px; font-weight: 700; cursor: pointer; margin-top: 10px; }
+  .anvand-forslag:hover { background: #146614; }
 </style>
 </head>
 <body>
@@ -83,7 +100,7 @@
     <!-- ARTIKLAR -->
     <div class="sektion">
       <div class="sektion-rubrik">2 · Artiklar</div>
-      <div class="hint" style="margin-bottom:8px;">För varje tips: <strong>klistra in länken</strong> och skriv en kort rubrik + 1–2 meningar. Klicka <strong>＋ Lägg till artikel</strong> för fler.</div>
+      <div class="hint" style="margin-bottom:8px;">För varje tips: <strong>klistra in länken</strong> och skriv en kort rubrik + 1–2 meningar. Har du fått ett mejl du vill vidarebefordra (t.ex. ett nyhetsbrev)? Öppna "Klistra in mejl i stället" under artikeln och klistra in HELA mejlet — vi tolkar det åt dig. Klicka <strong>＋ Lägg till artikel</strong> för fler.</div>
       <div id="artiklar"></div>
       <button type="button" class="lagg-till" onclick="laggTillArtikel()">＋ Lägg till artikel</button>
     </div>
@@ -148,8 +165,152 @@ function laggTillArtikel(data) {
     <label>Källa <span style="font-weight:400;color:#6B7280;">(valfritt)</span></label>
     <input type="text" class="a-kalla" value="${(data.source||'').replace(/"/g,'&quot;')}" placeholder="T.ex. Svenska Dagbladet">
     <div class="hint">Bild och kategori sätts automatiskt i redaktionen.</div>
+
+    <div class="rahjalp">
+      <button type="button" class="rahjalp-knapp" onclick="visaRaMejl(this)">📋 Klistra in mejl i stället för att fylla i fälten själv</button>
+      <div class="ra-block" style="display:none;margin-top:10px;">
+        <label>Klistra in HELA mejlet (Ctrl+A, Ctrl+C i mejlet, sedan Ctrl+V här)</label>
+        <textarea class="a-ramejl" rows="8" placeholder="Klistra in mejlet i sin helhet här — vi plockar bort avsändaruppgifter, citatstreck och sociala-medier-länkar automatiskt och föreslår rubrik, ingress och källa."></textarea>
+        <button type="button" class="tolka-knapp" onclick="tolkaRaMejl(this)">🧹 Tolka mejlet</button>
+
+        <div class="forhandsvisning">
+          <div class="fv-etikett">Så här blir artikeln</div>
+          <div class="fv-titel"></div>
+          <div class="fv-ingress"></div>
+          <div class="fv-kalla"></div>
+          <div class="fv-lank"></div>
+          <button type="button" class="anvand-forslag" onclick="anvandForslag(this)">✓ Använd förslaget ovan</button>
+        </div>
+
+        <details class="borttaget">
+          <summary>🧹 Detta togs bort automatiskt — klicka för att se</summary>
+          <ul></ul>
+        </details>
+      </div>
+    </div>
   `;
   document.getElementById('artiklar').appendChild(div);
+}
+
+function visaRaMejl(knapp) {
+  const block = knapp.nextElementSibling;
+  const visas = block.style.display !== 'none';
+  block.style.display = visas ? 'none' : 'block';
+  knapp.textContent = visas ? '📋 Klistra in mejl i stället för att fylla i fälten själv' : '📋 Dölj mejlinklistring';
+}
+
+// Rensar bort typiska mejl-artefakter (vidarebefordringshuvuden, citattecken, sociala
+// medier-fötter, spårningslänkar) och föreslår rubrik/ingress/källa/länk. Rent
+// regelbaserat (ingen server här) — appen kör en extra AI-kontroll vid inläsning,
+// se memory/nyhetsbrev_modul.md.
+function staedaMejltext(ra) {
+  const borttaget = [];
+  let rader = ra.replace(/\r\n/g, '\n').split('\n');
+
+  const HUVUD_MONSTER = /^(från|from|skickat|sent|till|to|ämne|subject|datum|date|svara till|reply-to|cc)\s*:/i;
+  const SOC_MONSTER    = /^\s*\[(facebook|twitter|x \(twitter\)|instagram|linkedin|whatsapp|telegram|bluesky|youtube)\]/i;
+  const FOT_MONSTER    = /(unsubscribe|avregistrera|avprenumerera|join our mailing list|följ oss|sent by|skickat av|about our service provider|donations are tax deductible|click to play|read on our website|trusted email from|try it free|update your preferences)/i;
+  const AVSKILJARE     = /^-{3,}\s*(ursprungligt meddelande|original message)\s*-{3,}$/i;
+  const SIGNATUR       = /^skickat (från|fr[åa]n) (min|mitt)\s/i;
+
+  const kvar = [];
+  for (const rad of rader) {
+    const r = rad.trim();
+    if (!r) { kvar.push(rad); continue; }
+    if (HUVUD_MONSTER.test(r))      { borttaget.push('Vidarebefordringshuvud: "' + r.slice(0, 80) + '"'); continue; }
+    if (r.startsWith('>'))          { borttaget.push('Citerad rad: "' + r.slice(0, 80) + '"'); continue; }
+    if (SOC_MONSTER.test(r))        { borttaget.push('Sociala medier-ikon/länk: "' + r.slice(0, 80) + '"'); continue; }
+    if (FOT_MONSTER.test(r))        { borttaget.push('Sidfot/prenumerationstext: "' + r.slice(0, 80) + '"'); continue; }
+    if (AVSKILJARE.test(r))         { borttaget.push('Vidarebefordringsavskiljare'); continue; }
+    if (SIGNATUR.test(r))           { borttaget.push('Mejlsignatur: "' + r.slice(0, 80) + '"'); continue; }
+    kvar.push(rad);
+  }
+
+  // Extrahera länkar innan de ev. städas bort ur texten — men hoppa över uppenbara
+  // spårnings-/utskicksverktygslänkar (de fungerar sällan som en ren "läs mer"-länk).
+  const SPARNINGS_DOMAN = /(rs6\.net|constantcontact\.com|list-manage\.com|mailchimp|sendgrid|hubspotlinks|click\.|trk\.|utm_)/i;
+  const alla_lankar = (ra.match(/https?:\/\/[^\s<>"')\]]+/g) || []);
+  let forslagUrl = alla_lankar.find(l => !SPARNINGS_DOMAN.test(l)) || alla_lankar[0] || '';
+  const antal_sparningslankar = alla_lankar.filter(l => SPARNINGS_DOMAN.test(l)).length;
+  if (antal_sparningslankar > 0) borttaget.push(antal_sparningslankar + ' spårningslänk(ar) (från utskicksverktyg, t.ex. Constant Contact/Mailchimp)');
+
+  // Ta bort kvarvarande råa URL:er ur brödtexten (de är sällan läsvärda i sig och
+  // gör förhandsgranskningen rörig) — den bästa länken sparas separat ovan.
+  const rensad = kvar.join('\n')
+    .replace(/https?:\/\/[^\s<>"')\]]+/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+
+  const stycken = rensad.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+
+  // Rubrikförslag: en kort rad (helst i citattecken eller kort mening) bland de första
+  // styckena — annars första stycket kortat.
+  let forslagRubrik = '';
+  for (const s of stycken.slice(0, 4)) {
+    const forstaRad = s.split('\n')[0].trim();
+    if (forstaRad.length > 8 && forstaRad.length <= 110) { forslagRubrik = forstaRad.replace(/^["“]|["”]$/g, ''); break; }
+  }
+  if (!forslagRubrik) forslagRubrik = (stycken[0] || '').slice(0, 90);
+
+  // Ingressförslag: nästa stycke efter rubrikraden (eller samma stycke minus rubrikraden).
+  let forslagIngress = '';
+  const rubrikStycke = stycken.find(s => s.startsWith(forslagRubrik));
+  if (rubrikStycke && rubrikStycke.length > forslagRubrik.length + 5) {
+    forslagIngress = rubrikStycke.slice(forslagRubrik.length).trim();
+  } else {
+    const idx = stycken.indexOf(rubrikStycke);
+    forslagIngress = stycken[idx + 1] || stycken[1] || stycken[0] || '';
+  }
+  // Korta ingressen till ett par meningar så förhandsgranskningen inte blir en vägg av text.
+  const meningar = forslagIngress.match(/[^.!?]+[.!?]+/g) || [forslagIngress];
+  forslagIngress = meningar.slice(0, 3).join(' ').trim();
+
+  // Källförslag: domänen ur avsändarens mejladress i ett "Från:"-huvud, om det fanns.
+  let forslagKalla = '';
+  const franRad = rader.find(r => /^(från|from)\s*:/i.test(r.trim()));
+  if (franRad) {
+    const epostMatch = franRad.match(/[\w.+-]+@([\w.-]+\.\w+)/);
+    if (epostMatch) forslagKalla = epostMatch[1];
+    const namnMatch = franRad.match(/:\s*"?([^"<]+?)"?\s*</);
+    if (namnMatch && namnMatch[1].trim()) forslagKalla = namnMatch[1].trim();
+  }
+
+  return { forslagRubrik, forslagIngress, forslagKalla, forslagUrl, borttaget };
+}
+
+function tolkaRaMejl(knapp) {
+  const block   = knapp.closest('.ra-block');
+  const raText  = block.querySelector('.a-ramejl').value;
+  if (!raText.trim()) return;
+  const resultat = staedaMejltext(raText);
+  block.dataset.forslag = JSON.stringify(resultat);
+
+  const fv = block.querySelector('.forhandsvisning');
+  fv.querySelector('.fv-titel').textContent   = resultat.forslagRubrik || '(ingen rubrik hittad — fyll i manuellt)';
+  fv.querySelector('.fv-ingress').textContent = resultat.forslagIngress || '(ingen ingress hittad — fyll i manuellt)';
+  fv.querySelector('.fv-kalla').textContent   = resultat.forslagKalla ? 'Källa: ' + resultat.forslagKalla : '';
+  fv.querySelector('.fv-lank').textContent    = resultat.forslagUrl || '';
+  fv.style.display = 'block';
+
+  const borttagetBox = block.querySelector('.borttaget');
+  const ul = borttagetBox.querySelector('ul');
+  ul.innerHTML = resultat.borttaget.length
+    ? resultat.borttaget.map(b => `<li>${b.replace(/</g,'&lt;')}</li>`).join('')
+    : '<li>Inget att rensa bort — mejlet såg redan rent ut.</li>';
+  borttagetBox.style.display = 'block';
+}
+
+function anvandForslag(knapp) {
+  const block = knapp.closest('.ra-block');
+  const resultat = JSON.parse(block.dataset.forslag || '{}');
+  const item = block.closest('.item');
+  if (resultat.forslagRubrik)  item.querySelector('.a-rubrik').value  = resultat.forslagRubrik;
+  if (resultat.forslagIngress) item.querySelector('.a-ingress').value = resultat.forslagIngress;
+  if (resultat.forslagKalla)   item.querySelector('.a-kalla').value   = resultat.forslagKalla;
+  if (resultat.forslagUrl)     item.querySelector('.a-url').value     = resultat.forslagUrl;
+  knapp.textContent = '✓ Infogat i fälten ovan';
+  knapp.disabled = true;
 }
 
 function laggTillVideo(data) {
