@@ -42,6 +42,7 @@
   .bekraftelse h2 { color: #004A99; font-size: 20px; margin: 12px 0 6px; }
   .bekraftelse p { color: #374151; font-size: 14px; }
   .hint { font-size: 11px; color: #6B7280; margin-top: 3px; }
+  .stycke-varning { display: none; background: #fff8e6; border: 1px solid #f0d78c; border-radius: 6px; padding: 9px 12px; font-size: 12px; color: #6b5200; margin-top: 6px; line-height: 1.5; }
   .rahjalp { margin-top: 10px; border-top: 1px dashed #dde4ed; padding-top: 10px; }
   .rahjalp-knapp { display: inline-flex; align-items: center; gap: 6px; background: #f0f4f8; border: 1px solid #ccd8e8; border-radius: 6px; padding: 7px 12px; font-size: 12px; color: #374151; cursor: pointer; }
   .rahjalp-knapp:hover { background: #EAF4FF; }
@@ -84,7 +85,8 @@
       <div class="sektion-rubrik">1 · Ledaren (Redaktören har ordet)</div>
       <div class="hint" style="margin-bottom:8px;">Skriv din text. Lämna en <strong>blankrad</strong> mellan styckena så blir det luft mellan dem i nyhetsbrevet.</div>
       <label for="l-text">Text</label>
-      <textarea id="l-text" rows="6" placeholder="Skriv ledaren här…"></textarea>
+      <textarea id="l-text" rows="6" placeholder="Skriv ledaren här…" oninput="kollaStycken(this)"></textarea>
+      <div class="stycke-varning" id="l-stycke-varning">⚠ Det här ser ut som ETT långt stycke utan blankrader — texten kan bli tät och svårläst i nyhetsbrevet. Lämna en tom rad där ett nytt stycke ska börja (tryck Enter två gånger).</div>
       <div class="rad2">
         <div>
           <label for="l-namn">Namn</label>
@@ -336,6 +338,19 @@ function laggTillVideo(data) {
 laggTillArtikel(); laggTillArtikel();
 laggTillVideo();
 
+// Varnar om lång text saknar blankrader mellan stycken (samma bugg som upptäcktes
+// 2026-09-09: Mats skickade in en ledartext på 3600+ tecken helt utan blankrader,
+// som blev ETT enda tätt stycke i nyhetsbrevet i stället för sex).
+function harBlankraderMellanStycken(text) {
+  return text.trim().split(/\n\s*\n/).filter(s => s.trim()).length > 1;
+}
+function kollaStycken(el) {
+  const varning = el.nextElementSibling;
+  if (!varning || !varning.classList.contains('stycke-varning')) return;
+  const langTextUtanBlankrad = el.value.trim().length > 400 && !harBlankraderMellanStycken(el.value);
+  varning.style.display = langTextUtanBlankrad ? 'block' : 'none';
+}
+
 function samlaIn() {
   const paras = document.getElementById('l-text').value.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
   const leader = {
@@ -395,6 +410,15 @@ async function skicka() {
     felBox.textContent = 'Fyll i minst ledartext eller en artikel innan du skickar.';
     felBox.style.display = 'block';
     return;
+  }
+
+  const lTextVarde = document.getElementById('l-text').value;
+  if (lTextVarde.trim().length > 400 && !harBlankraderMellanStycken(lTextVarde)) {
+    const fortsatt = confirm(
+      'Ledartexten ser ut som ETT långt stycke utan blankrader mellan styckena — den kan bli tät och svårläst i nyhetsbrevet.\n\n' +
+      'Vill du skicka in ändå, eller avbryta och lägga in tomma rader mellan styckena först?'
+    );
+    if (!fortsatt) return;
   }
 
   knapp.disabled = true;
